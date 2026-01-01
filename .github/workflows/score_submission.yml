@@ -1,0 +1,106 @@
+name: Score Submission
+
+on:
+  pull_request:
+    paths:
+      - "submissions/*.csv"
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  score:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout PR branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pandas scikit-learn
+      - name: Restore hidden test labels (from secret)
+        run: |
+          mkdir -p data
+          echo "${{ secrets.TEST_LABELS_B64 }}" | base64 --decode > data/test_labels.csv
+
+      - name: Detect submission file changed in this PR
+        id: detect
+        run: |
+          set -e
+
+          BASE_SHA="${{ github.event.pull_request.base.sha }}"
+          HEAD_SHA="${{ github.event.pull_request.head.sha }}"
+
+          echo "Base SHA: $BASE_SHA"
+          echo "Head SHA: $HEAD_SHA"
+
+          # List files changed between base and head
+          CHANGED=$(git diff --name-only "$BASE_SHA" "$HEAD_SHA" | grep -E '^submissions/.*\.csv$' || true)
+
+          echo "Changed submissions:"
+          echo "$CHANGED"
+
+          COUNT=$(echo "$CHANGED" | sed '/^\s*$/d' | wc -l | tr -d ' ')
+
+          if [ "$COUNT" -ne 1 ]; then
+            echo "❌ Please include exactly ONE submissions/*.csv file per PR."
+            echo "Found $COUNT submission files changed."
+            exit 1
+          fi
+
+          SUB_FILE=$(echo "$CHANGED" | head -n 1)
+          echo "Detected submission: $SUB_FILE"
+
+          echo "sub_file=$SUB_FILE" >> $GITHUB_OUTPUT
+
+      - name: Score submission
+        id: score
+        run: |
+          set -e
+          SUB_FILE="${{ steps.detect.outputs.sub_file }}"
+          echo "Scoring: $SUB_FILE"
+          python scoring_script.py "$SUB_FILE" > score.txt
+          cat score.txt
+
+          # Extract the numeric score from: "✅ Submission Macro F1: 0.284722"
+          SCORE=$(grep -Eo '[0-9]+\.[0-9]+' score.txt | head -n 1)
+          if [ -z "$SCORE" ]; then
+            echo "❌ Could not parse score output."
+            exit 1
+          fi
+
+          echo "macro_f1=$SCORE" >> $GITHUB_OUTPUT
+
+      - name: Update leaderboard
+        run: |
+          set -e
+          python update_leaderboard.py \
+            --participant "${{ github.actor }}" \
+            --score "${{ steps.score.outputs.macro_f1 }}" \
+            --submission "${{ steps.detect.outputs.sub_file }}"
+
+      - name: Commit updated leaderboard
+        run: |
+          set -e
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          # Only commit if leaderboard changed
+          if git status --porcelain | grep -q "leaderboard.md"; then
+            git add leaderboard.md
+            git commit -m "Update leaderboard"
+            git push
+          else
+            echo "No leaderboard changes to commit."
+          fi

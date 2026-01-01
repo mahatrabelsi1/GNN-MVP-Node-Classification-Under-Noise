@@ -1,0 +1,13 @@
+# Hidden labels must never be committed
+data/test_labels.csv
+
+# Local junk
+__pycache__/
+*.pyc
+*.log
+.DS_Store
+
+# (Optional) ignore local virtual envs
+.venv/
+venv/
+env/
