@@ -1,7 +1,7 @@
 # 🧠 GNN-MVP: Node Classification Under Noise
 
 Welcome to the **GNN-MVP Node Classification Challenge**.  
-This is a lightweight, GitHub-hosted machine learning competition inspired by Kaggle, designed to be **easy to join but hard to win**.
+This is a lightweight, GitHub-hosted machine learning competition inspired by Kaggle — **easy to join, hard to win**.
 
 ---
 
@@ -10,9 +10,9 @@ This is a lightweight, GitHub-hosted machine learning competition inspired by Ka
 Your task is to **predict the class label (`target`) for each node** in a test dataset using node-level features.
 
 The dataset is intentionally:
-- Noisy
-- Imbalanced
-- Deceptively simple
+- **Noisy**
+- **Imbalanced**
+- **Deceptively simple**
 
 Simple models may work — but optimizing the evaluation metric is challenging.
 
@@ -27,16 +27,12 @@ Contains node features and labels.
 
 id, f1, f2, f3, ..., target
 
-shell
-Copy code
 
 ### `data/test.csv`
 Contains node features only.
 
 id, f1, f2, f3, ...
 
-yaml
-Copy code
 
 Each row represents **one node**.
 
@@ -64,8 +60,6 @@ id,target
 2,1
 ...
 
-markdown
-Copy code
 
 ### Submission Rules
 - `id` must exactly match the IDs in `test.csv`
@@ -74,23 +68,20 @@ Copy code
 
 ---
 
-## 📤 How to Submit
+## 🚀 How to Submit
 
-1. Train your model locally using the provided dataset.
-2. Generate predictions for all samples in `data/test.csv`.
-3. Create a CSV file with the required format:
+1. Train your model locally using `data/train.csv`
+2. Generate predictions for all samples in `data/test.csv`
+3. Create a CSV file with the format:
 id,target
+4. Save it as `submissions/yourname.csv`
+5. Open a **Pull Request** with **only one submission file**
 
-yaml
-Copy code
-4. Save your file in the `submissions/` directory (example: `submissions/yourname.csv`).
-5. Open a Pull Request with **one submission file only**.
-
-Your submission will be scored automatically.
+Your submission will be **scored automatically**.
 
 ---
 
-## 🚀 Getting Started (Baseline)
+## 🧪 Getting Started (Baseline)
 
 A simple baseline model is provided to help you get started and verify the submission format.
 
@@ -99,36 +90,28 @@ A simple baseline model is provided to help you get started and verify the submi
 ```bash
 cd starter_code
 pip install -r requirements.txt
-python baseline.py 
+python baseline.py
 ```
-This script will:
-
-Train a basic model on data/train.csv
-
-Print a validation Macro F1-score
-
-Generate a valid submission file at:
-submissions/sample_submission.csv
-
+---
 ## 🏆 Leaderboard
 Submissions are scored automatically using GitHub Actions.
 
 After each valid Pull Request:
 
-Your submission is evaluated using the Macro F1-score
+Your submission is evaluated using Macro F1-score
 
 Results are added to leaderboard.md
 
-Rankings are sorted from highest to lowest score
+Rankings are sorted from highest to lowest
 
-Only the best score per participant is kept on the leaderboard.
---
+Only the best score per participant is kept.
+---
 ## 📜 Rules
-To ensure a fair competition, the following rules apply:
+To ensure a fair competition:
 
-❌ No external data is allowed
+❌ No external data allowed
 
-❌ Do not modify files in the data/ directory
+❌ Do not modify files in data/
 
 ❌ Do not modify scoring or leaderboard scripts
 
@@ -136,6 +119,6 @@ To ensure a fair competition, the following rules apply:
 
 ✅ Models must be trained locally
 
-⚠️ Invalid or malformed submissions will be rejected automatically
+⚠️ Invalid submissions are rejected automatically
 
 Failure to follow these rules may result in disqualification.
