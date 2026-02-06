@@ -1,12 +1,13 @@
-name: Score Submission
+name: Score Submission (PR)
 
 on:
   pull_request:
     paths:
-      - "submissions/*.csv"
+      - "submissions/inbox/**/predictions.csv"
+      - "submissions/inbox/**/metadata.json"
 
 permissions:
-  contents: write
+  contents: read
   pull-requests: write
 
 jobs:
@@ -28,79 +29,135 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install pandas scikit-learn
-      - name: Restore hidden test labels (from secret)
-        run: |
-          mkdir -p data
-          echo "${{ secrets.TEST_LABELS_B64 }}" | base64 --decode > data/test_labels.csv
+          pip install pandas scikit-learn numpy
 
-      - name: Detect submission file changed in this PR
+      - name: Restore hidden test labels (secret)
+        run: |
+          mkdir -p data/private
+          echo "${{ secrets.TEST_LABELS_B64 }}" | base64 -d > data/private/test_labels.csv
+
+      - name: Detect + validate submission files in this PR
         id: detect
         run: |
           set -e
-
           BASE_SHA="${{ github.event.pull_request.base.sha }}"
           HEAD_SHA="${{ github.event.pull_request.head.sha }}"
 
-          echo "Base SHA: $BASE_SHA"
-          echo "Head SHA: $HEAD_SHA"
+          CHANGED=$(git diff --name-only "$BASE_SHA" "$HEAD_SHA" || true)
 
-          # List files changed between base and head
-          CHANGED=$(git diff --name-only "$BASE_SHA" "$HEAD_SHA" | grep -E '^submissions/.*\.csv$' || true)
-
-          echo "Changed submissions:"
-          echo "$CHANGED"
-
-          COUNT=$(echo "$CHANGED" | sed '/^\s*$/d' | wc -l | tr -d ' ')
-
-          if [ "$COUNT" -ne 1 ]; then
-            echo "❌ Please include exactly ONE submissions/*.csv file per PR."
-            echo "Found $COUNT submission files changed."
+          # Block changes outside submission files
+          BAD=$(echo "$CHANGED" | grep -vE '^submissions/inbox/.*/.*/(predictions\.csv|metadata\.json)$' || true)
+          if [ -n "$BAD" ]; then
+            echo "❌ This PR can only add submission files."
+            echo "Blocked changed files:"
+            echo "$BAD"
             exit 1
           fi
 
-          SUB_FILE=$(echo "$CHANGED" | head -n 1)
-          echo "Detected submission: $SUB_FILE"
+          PRED=$(echo "$CHANGED" | grep -E '^submissions/inbox/.*/.*/predictions\.csv$' || true)
+          META=$(echo "$CHANGED" | grep -E '^submissions/inbox/.*/.*/metadata\.json$' || true)
 
-          echo "sub_file=$SUB_FILE" >> $GITHUB_OUTPUT
+          PCOUNT=$(echo "$PRED" | sed '/^\s*$/d' | wc -l | tr -d ' ')
+          MCOUNT=$(echo "$META" | sed '/^\s*$/d' | wc -l | tr -d ' ')
 
-      - name: Score submission
+          if [ "$PCOUNT" -ne 1 ] || [ "$MCOUNT" -ne 1 ]; then
+            echo "❌ Each PR must include exactly ONE predictions.csv and ONE metadata.json"
+            echo "Found predictions: $PCOUNT, metadata: $MCOUNT"
+            exit 1
+          fi
+
+          # Ensure they are in the same folder
+          PDIR=$(dirname "$PRED")
+          MDIR=$(dirname "$META")
+          if [ "$PDIR" != "$MDIR" ]; then
+            echo "❌ predictions.csv and metadata.json must be in the SAME run folder"
+            echo "pred dir: $PDIR"
+            echo "meta dir: $MDIR"
+            exit 1
+          fi
+
+          echo "pred_file=$PRED" >> $GITHUB_OUTPUT
+          echo "meta_file=$META" >> $GITHUB_OUTPUT
+          echo "run_dir=$PDIR" >> $GITHUB_OUTPUT
+
+      - name: Validate metadata.json content
+        run: |
+          python scoring/validate_metadata.py "${{ steps.detect.outputs.meta_file }}"
+
+      - name: Read metadata fields
+        id: meta
+        run: |
+          set -e
+          python - <<'PY'
+          import json
+
+          path = "${{ steps.detect.outputs.meta_file }}"
+          with open(path, "r", encoding="utf-8") as f:
+            d = json.load(f)
+
+          team = str(d.get("team","")).strip()
+          run_id = str(d.get("run_id","")).strip()
+          author_type = str(d.get("author_type","")).strip().lower()
+          model = str(d.get("model","")).strip()
+          notes = str(d.get("notes","") or "").strip()
+
+          notes = notes.replace("\n", " ").replace("\r", " ").strip()
+
+          out_path = "${GITHUB_OUTPUT}"
+          with open(out_path, "a", encoding="utf-8") as out:
+            out.write(f"team={team}\n")
+            out.write(f"run_id={run_id}\n")
+            out.write(f"author_type={author_type}\n")
+            out.write(f"model={model}\n")
+            out.write(f"notes={notes}\n")
+          PY
+
+      - name: Score submission (no leaderboard update)
         id: score
         run: |
           set -e
-          SUB_FILE="${{ steps.detect.outputs.sub_file }}"
-          echo "Scoring: $SUB_FILE"
-          python scoring_script.py "$SUB_FILE" > score.txt
+          python scoring/score_submission.py --pred "${{ steps.detect.outputs.pred_file }}" > score.txt
           cat score.txt
 
-          # Extract the numeric score from: "✅ Submission Macro F1: 0.284722"
-          SCORE=$(grep -Eo '[0-9]+\.[0-9]+' score.txt | head -n 1)
+          SCORE=$(grep -Eo 'Macro-F1:\s*[0-9]+\.[0-9]+' score.txt | head -n 1 | grep -Eo '[0-9]+\.[0-9]+')
           if [ -z "$SCORE" ]; then
             echo "❌ Could not parse score output."
             exit 1
           fi
-
           echo "macro_f1=$SCORE" >> $GITHUB_OUTPUT
 
-      - name: Update leaderboard
-        run: |
-          set -e
-          python update_leaderboard.py \
-            --participant "${{ github.actor }}" \
-            --score "${{ steps.score.outputs.macro_f1 }}" \
-            --submission "${{ steps.detect.outputs.sub_file }}"
+      - name: Comment score on PR
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const score = "${{ steps.score.outputs.macro_f1 }}";
+            const pred = "${{ steps.detect.outputs.pred_file }}";
+            const meta = "${{ steps.detect.outputs.meta_file }}";
 
-      - name: Commit updated leaderboard
-        run: |
-          set -e
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
+            const team = "${{ steps.meta.outputs.team }}";
+            const runId = "${{ steps.meta.outputs.run_id }}";
+            const authorType = "${{ steps.meta.outputs.author_type }}";
+            const model = "${{ steps.meta.outputs.model }}";
+            const notes = "${{ steps.meta.outputs.notes }}";
 
-          # Only commit if leaderboard changed
-          if git status --porcelain | grep -q "leaderboard.md"; then
-            git add leaderboard.md
-            git commit -m "Update leaderboard"
-            git push
-          else
-            echo "No leaderboard changes to commit."
-          fi
+            const notesLine = notes ? `- **Notes:** ${notes}\n` : "";
+            const body =
+`✅ **Submission scored**
+
+- **Team:** \`${team}\`
+- **Run:** \`${runId}\`
+- **Author type:** \`${authorType}\`
+- **Model:** \`${model}\`
+${notesLine}- **Macro-F1:** \`${score}\`
+
+- **predictions:** \`${pred}\`
+- **metadata:** \`${meta}\`
+
+ℹ️ Leaderboard updates after the PR is merged into **main**.`;
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body
+            });

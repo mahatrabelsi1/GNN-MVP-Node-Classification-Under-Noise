@@ -1,0 +1,570 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Leaderboard — Diabetes GNN Under Noise</title>
+  <style>
+    :root{
+      --bg1:#0b1220;
+      --bg2:#0f1b33;
+      --card:#121a2b;
+      --card2:#0f172a;
+      --text:#e6e8ee;
+      --muted:#a7b0c0;
+      --line:rgba(255,255,255,.08);
+      --accent:#7c3aed;
+      --accent2:#22c55e;
+      --warn:#f59e0b;
+      --err:#ef4444;
+      --shadow: 0 20px 60px rgba(0,0,0,.45);
+      --radius:16px;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, "Apple Color Emoji","Segoe UI Emoji";
+      color:var(--text);
+      background:
+        radial-gradient(1200px 600px at 20% 10%, rgba(124,58,237,.35), transparent 60%),
+        radial-gradient(1000px 500px at 80% 20%, rgba(34,197,94,.25), transparent 55%),
+        linear-gradient(180deg, var(--bg1), var(--bg2));
+      min-height:100vh;
+    }
+    .wrap{
+      max-width:1200px;
+      margin:0 auto;
+      padding:28px 18px 60px;
+    }
+    header{
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:16px;
+      margin-bottom:18px;
+    }
+    .title{
+      display:flex;
+      flex-direction:column;
+      gap:6px;
+    }
+    h1{
+      margin:0;
+      font-size:34px;
+      letter-spacing:-0.02em;
+      line-height:1.1;
+    }
+    .sub{
+      margin:0;
+      color:var(--muted);
+      font-size:14px;
+      line-height:1.5;
+    }
+    .pillrow{display:flex; gap:10px; flex-wrap:wrap; margin-top:10px}
+    .pill{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      padding:8px 10px;
+      border:1px solid var(--line);
+      border-radius:999px;
+      background:rgba(255,255,255,.04);
+      color:var(--muted);
+      font-size:12px;
+      backdrop-filter: blur(8px);
+    }
+    .dot{
+      width:8px; height:8px; border-radius:50%;
+      background:var(--accent);
+      box-shadow: 0 0 0 4px rgba(124,58,237,.18);
+    }
+    .dot.green{ background: recognized}
+    .dot.green{ background:var(--accent2); box-shadow: 0 0 0 4px rgba(34,197,94,.18);}
+
+    .card{
+      border:1px solid var(--line);
+      border-radius:var(--radius);
+      background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.02));
+      box-shadow: var(--shadow);
+      overflow:hidden;
+    }
+    .cardhead{
+      padding:16px 16px 10px;
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:12px;
+      flex-wrap:wrap;
+    }
+    .leftmeta{
+      display:flex;
+      flex-direction:column;
+      gap:2px;
+      min-width: 260px;
+    }
+    .small{
+      font-size:12px;
+      color:var(--muted);
+    }
+    .kbd{
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      padding:3px 8px;
+      border-radius:10px;
+      border:1px solid var(--line);
+      background: rgba(0,0,0,.25);
+      color: var(--text);
+      font-size:12px;
+    }
+    .actions{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      justify-content:flex-end;
+      align-items:center;
+    }
+    .btn{
+      cursor:pointer;
+      border:1px solid var(--line);
+      background: rgba(255,255,255,.04);
+      color: var(--text);
+      border-radius:12px;
+      padding:9px 12px;
+      font-size:13px;
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      transition: transform .08s ease, background .15s ease, border-color .15s ease;
+      user-select:none;
+      white-space:nowrap;
+    }
+    .btn:hover{ transform: translateY(-1px); background: rgba(255,255,255,.07); border-color: rgba(255,255,255,.14);}
+    .btn.primary{
+      border-color: rgba(124,58,237,.35);
+      background: rgba(124,58,237,.18);
+    }
+    .btn.primary:hover{ background: rgba(124,58,237,.24); }
+
+    .controls{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      align-items:center;
+      justify-content:flex-end;
+    }
+    .field{
+      display:flex;
+      align-items:center;
+      gap:8px;
+      border:1px solid var(--line);
+      background: rgba(0,0,0,.18);
+      border-radius:12px;
+      padding:8px 10px;
+    }
+    .field label{
+      color: var(--muted);
+      font-size:12px;
+      white-space:nowrap;
+    }
+    .field input, .field select{
+      border:0;
+      outline:none;
+      color: var(--text);
+      background: transparent;
+      font-size:13px;
+      min-width: 160px;
+    }
+    .field select{ min-width: 130px; }
+
+    .grid{
+      display:grid;
+      grid-template-columns: 1fr;
+      gap:12px;
+      padding:0 16px 16px;
+    }
+    .statbar{
+      display:grid;
+      grid-template-columns: repeat(4, minmax(0,1fr));
+      gap:10px;
+    }
+    .stat{
+      border:1px solid var(--line);
+      border-radius:14px;
+      background: rgba(0,0,0,.18);
+      padding:10px 12px;
+      min-height:64px;
+    }
+    .stat .label{ color:var(--muted); font-size:12px; }
+    .stat .value{ font-size:18px; margin-top:6px; font-weight:650; letter-spacing:-0.01em; }
+    .stat .hint{ color:var(--muted); font-size:12px; margin-top:2px; }
+
+    .tablewrap{
+      border:1px solid var(--line);
+      border-radius:14px;
+      overflow:hidden;
+      background: rgba(0,0,0,.20);
+    }
+    table{
+      width:100%;
+      border-collapse:collapse;
+      font-size:14px;
+    }
+    thead th{
+      position:sticky; top:0;
+      background: rgba(18,26,43,.92);
+      backdrop-filter: blur(8px);
+      border-bottom:1px solid var(--line);
+      padding:12px 12px;
+      text-align:left;
+      color: var(--muted);
+      font-weight:600;
+    }
+    tbody td{
+      padding:12px 12px;
+      border-bottom:1px solid rgba(255,255,255,.06);
+      vertical-align:middle;
+    }
+    tbody tr:hover{
+      background: rgba(124,58,237,.08);
+    }
+    .right{ text-align:right; }
+    .rank{
+      display:inline-flex; align-items:center; justify-content:center;
+      width:28px; height:28px; border-radius:10px;
+      border:1px solid var(--line);
+      background: rgba(255,255,255,.03);
+      font-weight:700;
+    }
+    .badge{
+      display:inline-flex; align-items:center; gap:8px;
+      padding:6px 10px;
+      border-radius:999px;
+      border:1px solid var(--line);
+      background: rgba(255,255,255,.03);
+      color: var(--text);
+      font-size:12px;
+      max-width: 220px;
+      overflow:hidden;
+      text-overflow:ellipsis;
+      white-space:nowrap;
+    }
+    .badge.smallpill{
+      max-width: 260px;
+      opacity: 0.95;
+    }
+    .score{
+      font-variant-numeric: tabular-nums;
+      font-weight:700;
+    }
+    .gold{ color:#fbbf24; }
+    .silver{ color:#cbd5e1; }
+    .bronze{ color:#fb7185; }
+    .status{
+      padding: 0 16px 16px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+    .status .error{ color: var(--err); font-weight:650; }
+    .status .ok{ color: var(--accent2); font-weight:650; }
+    .footer{
+      margin-top:18px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .muted{ color: var(--muted); }
+
+    @media (max-width: 1000px){
+      .statbar{ grid-template-columns: repeat(2, minmax(0,1fr)); }
+      .field input{ min-width: 140px; }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="wrap">
+    <header>
+      <div class="title">
+        <h1>Leaderboard</h1>
+        <p class="sub">Diabetes Node Classification Under Noise — <b>Macro-F1</b> (threshold 0.5)</p>
+        <div class="pillrow">
+          <span class="pill"><span class="dot"></span> GNN mini-competition</span>
+          <span class="pill"><span class="dot green"></span> Hidden test labels</span>
+          <span class="pill">Source: <span class="kbd">leaderboard/leaderboard.csv</span></span>
+        </div>
+      </div>
+
+      <div class="actions">
+        <button class="btn primary" id="btnReload">↻ Reload</button>
+        <button class="btn" id="btnSort">⇅ Sort: Best</button>
+      </div>
+    </header>
+
+    <div class="card">
+      <div class="cardhead">
+        <div class="leftmeta">
+          <div class="small">Updates whenever <span class="kbd">leaderboard.csv</span> changes.</div>
+          <div class="small">Tip: open via <span class="kbd">http://localhost:8000/docs/leaderboard.html</span> or GitHub Pages (not file://).</div>
+        </div>
+
+        <div class="controls">
+          <div class="field">
+            <label for="fAuthor">Author</label>
+            <select id="fAuthor">
+              <option value="">All</option>
+              <option value="human">human</option>
+              <option value="llm">llm</option>
+              <option value="hybrid">hybrid</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label for="fTeam">Team</label>
+            <input id="fTeam" type="text" placeholder="contains…" autocomplete="off" />
+          </div>
+
+          <div class="field">
+            <label for="fModel">Model</label>
+            <input id="fModel" type="text" placeholder="contains…" autocomplete="off" />
+          </div>
+
+          <div class="field">
+            <label for="fNotes">Notes</label>
+            <input id="fNotes" type="text" placeholder="contains…" autocomplete="off" />
+          </div>
+
+          <button class="btn" id="btnClear">✕ Clear</button>
+        </div>
+      </div>
+
+      <div class="grid">
+        <div class="statbar">
+          <div class="stat">
+            <div class="label">Runs</div>
+            <div class="value" id="statRuns">—</div>
+            <div class="hint">filtered runs</div>
+          </div>
+          <div class="stat">
+            <div class="label">Best Macro-F1</div>
+            <div class="value" id="statBest">—</div>
+            <div class="hint">best in view</div>
+          </div>
+          <div class="stat">
+            <div class="label">Top Team</div>
+            <div class="value" id="statTopTeam">—</div>
+            <div class="hint">current leader</div>
+          </div>
+          <div class="stat">
+            <div class="label">Last Update</div>
+            <div class="value" id="statLast">—</div>
+            <div class="hint">most recent in view</div>
+          </div>
+        </div>
+
+        <div class="tablewrap">
+          <table id="tbl" style="display:none;">
+            <thead>
+              <tr>
+                <th class="right">Rank</th>
+                <th>Team</th>
+                <th>Run</th>
+                <th>Author</th>
+                <th>Model</th>
+                <th>Notes</th>
+                <th class="right">Macro-F1</th>
+                <th>Submitted at</th>
+              </tr>
+            </thead>
+            <tbody id="tbody"></tbody>
+          </table>
+          <div class="status" id="status">Loading…</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="footer">
+      If you see “Failed to fetch”, you opened the file directly. Use a server (localhost) or GitHub Pages.
+      <br/>
+      Local: <span class="kbd">http://localhost:8000/docs/leaderboard.html</span>
+    </div>
+  </div>
+
+  <script>
+    const statusEl = document.getElementById("status");
+    const tbl = document.getElementById("tbl");
+    const tbody = document.getElementById("tbody");
+
+    const statRuns = document.getElementById("statRuns");
+    const statBest = document.getElementById("statBest");
+    const statTopTeam = document.getElementById("statTopTeam");
+    const statLast = document.getElementById("statLast");
+
+    const btnReload = document.getElementById("btnReload");
+    const btnSort = document.getElementById("btnSort");
+    const btnClear = document.getElementById("btnClear");
+
+    const fAuthor = document.getElementById("fAuthor");
+    const fTeam = document.getElementById("fTeam");
+    const fModel = document.getElementById("fModel");
+    const fNotes = document.getElementById("fNotes");
+
+    let sortMode = "best"; // best | latest
+    let rowsAll = [];      // all rows loaded from CSV (normalized)
+    let rowsView = [];     // filtered + sorted view
+
+    function escHtml(s){
+      return String(s ?? "")
+        .replaceAll("&","&amp;")
+        .replaceAll("<","&lt;")
+        .replaceAll(">","&gt;")
+        .replaceAll('"',"&quot;")
+        .replaceAll("'","&#039;");
+    }
+
+    // Simple CSV parser: assumes no commas inside values (OK for our fields)
+    function parseCSV(text) {
+      const lines = text.trim().split(/\r?\n/);
+      if (lines.length <= 1) return [];
+      const header = lines[0].split(",").map(s => s.trim());
+      const rows = [];
+      for (let i = 1; i < lines.length; i++) {
+        const cols = lines[i].split(",");
+        const obj = {};
+        header.forEach((h, idx) => obj[h] = (cols[idx] ?? "").trim());
+        rows.push(obj);
+      }
+      return rows;
+    }
+
+    function formatScore(x){
+      if (!Number.isFinite(x)) return "—";
+      return x.toFixed(6);
+    }
+
+    function applyFilters(){
+      const a = (fAuthor.value || "").toLowerCase().trim();
+      const t = (fTeam.value || "").toLowerCase().trim();
+      const m = (fModel.value || "").toLowerCase().trim();
+      const n = (fNotes.value || "").toLowerCase().trim();
+
+      rowsView = rowsAll.filter(r => {
+        if (a && (r.author_type || "").toLowerCase() !== a) return false;
+        if (t && !(r.team || "").toLowerCase().includes(t)) return false;
+        if (m && !(r.model || "").toLowerCase().includes(m)) return false;
+        if (n && !(r.notes || "").toLowerCase().includes(n)) return false;
+        return true;
+      });
+
+      render(rowsView);
+    }
+
+    function render(rows){
+      if (!rows.length){
+        tbl.style.display = "none";
+        statusEl.innerHTML = "<span class='error'>No runs match the filters.</span>";
+        statRuns.textContent = "0";
+        statBest.textContent = "—";
+        statTopTeam.textContent = "—";
+        statLast.textContent = "—";
+        return;
+      }
+
+      let view = rows.slice();
+      if (sortMode === "best"){
+        view.sort((a,b) => b.macro_f1 - a.macro_f1);
+      } else {
+        view.sort((a,b) => (b.submitted_at || "").localeCompare(a.submitted_at || ""));
+      }
+
+      const best = view.reduce((m,r)=> r.macro_f1>m.macro_f1 ? r : m, view[0]);
+
+      statRuns.textContent = String(view.length);
+      statBest.textContent = formatScore(best.macro_f1);
+      statTopTeam.textContent = best.team || "—";
+      statLast.textContent = (sortMode === "latest" ? (view[0].submitted_at || "—") : (best.submitted_at || "—"));
+
+      tbody.innerHTML = "";
+      view.forEach((r, idx) => {
+        const tr = document.createElement("tr");
+
+        let cls = "";
+        if (idx === 0) cls = "gold";
+        else if (idx === 1) cls = "silver";
+        else if (idx === 2) cls = "bronze";
+
+        const notes = r.notes || "";
+        const notesPill = notes ? `<span class="badge smallpill" title="${escHtml(notes)}">${escHtml(notes)}</span>` : `<span class="muted">—</span>`;
+
+        tr.innerHTML = `
+          <td class="right"><span class="rank ${cls}">${idx+1}</span></td>
+          <td><span class="badge">${escHtml(r.team)}</span></td>
+          <td><span class="badge">${escHtml(r.run_id)}</span></td>
+          <td><span class="badge">${escHtml(r.author_type)}</span></td>
+          <td><span class="badge" title="${escHtml(r.model)}">${escHtml(r.model)}</span></td>
+          <td>${notesPill}</td>
+          <td class="right score ${cls}">${formatScore(r.macro_f1)}</td>
+          <td>${escHtml(r.submitted_at || "")}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      tbl.style.display = "";
+      statusEl.innerHTML = "<span class='ok'>Loaded</span> " + view.length + " run(s).";
+    }
+
+    async function load(){
+      statusEl.textContent = "Loading…";
+      tbl.style.display = "none";
+
+      try{
+        // leaderboard.html in /docs so leaderboard is one level up
+        const res = await fetch("../leaderboard/leaderboard.csv", { cache: "no-store" });
+        if (!res.ok) throw new Error("Cannot load leaderboard.csv (HTTP " + res.status + ")");
+        const text = await res.text();
+
+        const raw = parseCSV(text);
+
+        rowsAll = raw
+          .filter(r => r.team && r.run_id && r.macro_f1)
+          .map(r => ({
+            team: r.team,
+            run_id: r.run_id,
+            author_type: r.author_type || "",
+            model: r.model || "",
+            notes: r.notes || "",
+            macro_f1: Number(r.macro_f1),
+            submitted_at: r.submitted_at || ""
+          }))
+          .filter(r => Number.isFinite(r.macro_f1));
+
+        applyFilters();
+      }catch(e){
+        statusEl.innerHTML = "<span class='error'>Error:</span> " + escHtml(e.message);
+      }
+    }
+
+    function clearFilters(){
+      fAuthor.value = "";
+      fTeam.value = "";
+      fModel.value = "";
+      fNotes.value = "";
+      applyFilters();
+    }
+
+    // Events
+    btnReload.addEventListener("click", load);
+    btnSort.addEventListener("click", () => {
+      sortMode = (sortMode === "best") ? "latest" : "best";
+      btnSort.textContent = "⇅ Sort: " + (sortMode === "best" ? "Best" : "Latest");
+      render(rowsView);
+    });
+
+    btnClear.addEventListener("click", clearFilters);
+
+    [fAuthor, fTeam, fModel, fNotes].forEach(el => {
+      el.addEventListener("input", applyFilters);
+      el.addEventListener("change", applyFilters);
+    });
+
+    load();
+  </script>
+</body>
+</html>

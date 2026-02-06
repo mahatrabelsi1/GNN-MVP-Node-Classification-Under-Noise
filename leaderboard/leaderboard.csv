@@ -1,0 +1,2 @@
+team,run_id,macro_f1,submitted_at,author_type,model,notes
+demo,run1,0.08106299588949431,2026-02-06 16:57:01 UTC,human,baseline,demo submission for testing
