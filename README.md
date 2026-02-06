@@ -176,7 +176,7 @@ updates and commits
 ```
 
 ### 🏆 Leaderboard
-Source of truth: leaderboard/leaderboard.csv
+Source of truth: [Link to live  Leaderboard ](https://mahatrabelsi1.github.io/GNN-MVP-Node-Classification-Under-Noise/leaderboard.html)
 
 Markdown: leaderboard/leaderboard.md
 
