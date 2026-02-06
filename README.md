@@ -1,124 +1,203 @@
-# 🧠 GNN-MVP: Node Classification Under Noise
+# 🧠 DiaGraph — Robust Diabetes Prediction on Noisy Graphs
 
-Welcome to the **GNN-MVP Node Classification Challenge**.  
-This is a lightweight, GitHub-hosted machine learning competition inspired by Kaggle — **easy to join, hard to win**.
+**DiaGraph** is a **prediction-only GitHub mini-competition** for **graph machine learning**.
 
----
-
-## 🎯 Challenge Objective
-
-Your task is to **predict the class label (`target`) for each node** in a test dataset using node-level features.
-
-The dataset is intentionally:
-- **Noisy**
-- **Imbalanced**
-- **Deceptively simple**
-
-Simple models may work — but optimizing the evaluation metric is challenging.
+It is **not an application**.  
+It is a **benchmark + evaluation pipeline** where participants train models **locally** and submit **only prediction files** via Pull Requests.
 
 ---
 
-## 📂 Dataset Description
+## ✅ What this project is (exactly)
 
-All data is provided as CSV files.
+This project is:
 
-### `data/train.csv`
-Contains node features and labels.
+- **Supervised Learning** (train/val labels are provided)
+- **Graph Machine Learning** task
+- **Node Classification** problem  
+  (each node = one patient, predict diabetes label per node)
+- A **robustness / noise-oriented benchmark**  
+  (noisy + imbalanced data, hidden test labels)
 
-id, f1, f2, f3, ..., target
+**One-line description:**
+
+> **A supervised graph node classification benchmark for robust diabetes prediction under noisy conditions.**
+
+---
+
+## 🎯 Objective
+
+Predict whether a node represents a **diabetic patient** (binary classification) using:
+
+- **Node features** (clinical attributes)
+- **Graph edges / adjacency** (similarity relations between patients)
+
+Both **GNN models** and **non-GNN baselines** are allowed.
+
+---
+
+## 🧩 Graph Setting
+
+- Each row in `nodes.csv` represents one **patient node**
+- `edges.csv` contains the **graph structure**
+- Your model can use edges (GNNs) or ignore them (baseline)
+
+This is a **graph node classification** task.
+
+---
+
+## 📂 Repository Data
+
+### Public data (committed)
+
+```text
+data/public/
+├── nodes.csv           # node features ONLY (no labels)
+├── edges.csv           # adjacency list (graph edges)
+├── train.csv           # node ids + labels (training)
+├── val.csv             # node ids + labels (validation)
+├── test_nodes.csv      # node ids ONLY (final test for predictions)
+├── sample_submission.csv
+```
+
+That’s the right Markdown structure: **one fenced block** only.
 
 
-### `data/test.csv`
-Contains node features only.
-
-id, f1, f2, f3, ...
-
-
-Each row represents **one node**.
+### 🔒 Private data (never committed)
+```text
+data/private/
+└── test_labels.csv # hidden ground truth (used only in CI scoring)
+```
+Test labels are injected securely during GitHub Actions via Secrets.
 
 ---
 
 ## 📊 Evaluation Metric
 
-### Macro F1-score
+**Macro F1-score** with **threshold = 0.5**
 
-- F1-score is computed independently for each class
-- All classes are weighted equally
-- Strongly penalizes models that ignore minority classes
-
-➡️ Predicting only the majority class will result in a low score.
+- evaluates both classes equally
+- strongly penalizes predicting only the majority class
 
 ---
 
-## 📤 Submission Format
+## 📤 Submission (STRICT)
 
-Participants must submit a CSV file in the `submissions/` directory with the **exact format**:
-
-id,target
-0,2
-1,0
-2,1
-...
-
-
-### Submission Rules
-- `id` must exactly match the IDs in `test.csv`
-- `target` must be a valid class label
-- **One submission per Pull Request**
-
----
-
-## 🚀 How to Submit
-
-1. Train your model locally using `data/train.csv`
-2. Generate predictions for all samples in `data/test.csv`
-3. Create a CSV file with the format:
-id,target
-4. Save it as `submissions/yourname.csv`
-5. Open a **Pull Request** with **only one submission file**
-
-Your submission will be **scored automatically**.
-
----
-
-## 🧪 Getting Started (Baseline)
-
-A simple baseline model is provided to help you get started and verify the submission format.
-
-### Run the baseline
-
-```bash
-cd starter_code
-pip install -r requirements.txt
-python baseline.py
+### Required folder structure
+```text
+submissions/inbox/<team>/<run_id>/
+├── predictions.csv
+└── metadata.json
 ```
+
+### `predictions.csv` format
+
+```csv
+id,y_pred
+123,0.82
+124,0.11
+125,0.93
+```
+**Rules**
+
+`id` must match exactly the ids in `data/public/test_nodes.csv`  
+`y_pred` must be a probability in \[0, 1]  
+Row count must match `test_nodes.csv`  
+
 ---
-## 🏆 Leaderboard
-Submissions are scored automatically using GitHub Actions.
 
-After each valid Pull Request:
+**metadata.json format**
 
-Your submission is evaluated using Macro F1-score
+Copy from:
 
-Results are added to leaderboard.md
+```text
+submissions/inbox/metadata_template.json
+```
+Example:
+```text
+{
+  "team": "my_team",
+  "run_id": "gcn_v1",
+  "author_type": "human",
+  "model": "GCN + MLP",
+  "notes": "Used edges + class weights"
+}
+```
+Allowed author_type values:
+```text
+human
+llm
+hybrid
+```
 
-Rankings are sorted from highest to lowest
+### 🚀 How to Participate
+1/ Clone the repository
+2/Train your model locally using:
+```text
+data/public/nodes.csv
 
-Only the best score per participant is kept.
----
-## 📜 Rules
-To ensure a fair competition:
+data/public/edges.csv
 
-❌ No external data allowed
+data/public/train.csv + val.csv
+```
+3/Generate predictions for all ids in data/public/test_nodes.csv
+Create:
+```text
+predictions.csv
 
-❌ Do not modify files in data/
+metadata.json
+```
+Add them to:
+```text
+submissions/inbox/<team>/<run_id>/
+```
+4/Open a Pull Request
+✅ the PR must modify only these two files
 
-❌ Do not modify scoring or leaderboard scripts
+
+### 🤖 Automatic Scoring (GitHub Actions)
+On Pull Request
+```text
+validates folder structure
+
+validates metadata.json
+
+scores predictions.csv
+
+posts Macro-F1 + metadata as a PR comment
+
+❌ does not update leaderboard yet
+
+On Merge to main
+detects the merged submission
+
+scores it again
+
+updates and commits
+```
+
+### 🏆 Leaderboard
+Source of truth: leaderboard/leaderboard.csv
+
+Markdown: leaderboard/leaderboard.md
+
+Interactive UI:
+docs/leaderboard.html
+
+
+### 📜 Rules
+```text
+❌ No external data
+❌ Do not modify:
+data/
+scoring/
+.github/workflows/
+leaderboard/
 
 ❌ Do not submit code — predictions only
+❌ One submission per Pull Request
 
-✅ Models must be trained locally
+✅ Train locally
+✅ Submit only predictions.csv + metadata.json in the correct folder
 
-⚠️ Invalid submissions are rejected automatically
-
-Failure to follow these rules may result in disqualification.
+Invalid submissions will be rejected automatically.
+```
