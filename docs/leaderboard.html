@@ -516,7 +516,7 @@
 
       try{
         // leaderboard.html in /docs so leaderboard is one level up
-        const res = await fetch("../leaderboard/leaderboard.csv", { cache: "no-store" });
+        const res = await fetch("./leaderboard.csv", { cache: "no-store" });
         if (!res.ok) throw new Error("Cannot load leaderboard.csv (HTTP " + res.status + ")");
         const text = await res.text();
 
