@@ -67,4 +67,3 @@ jobs:
           else
             echo "No leaderboard changes to commit."
           fi
-```
