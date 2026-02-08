@@ -28,13 +28,24 @@ jobs:
 
       - name: Install dependencies
         run: |
+          set -e
           python -m pip install --upgrade pip
           pip install pandas scikit-learn numpy
 
       - name: Restore hidden test labels (secret)
         run: |
+          set -e
           mkdir -p data/private
+
+          # If secrets are missing (e.g., PR from fork), fail with a clear message
+          if [ -z "${{ secrets.TEST_LABELS_B64 }}" ]; then
+            echo "❌ TEST_LABELS_B64 secret is not available to this workflow run."
+            echo "If this PR is from a fork, GitHub does not expose secrets to it."
+            exit 1
+          fi
+
           echo "${{ secrets.TEST_LABELS_B64 }}" | base64 -d > data/private/test_labels.csv
+          test -s data/private/test_labels.csv
 
       - name: Detect + validate submission files in this PR
         id: detect
@@ -43,10 +54,10 @@ jobs:
           BASE_SHA="${{ github.event.pull_request.base.sha }}"
           HEAD_SHA="${{ github.event.pull_request.head.sha }}"
 
-          CHANGED=$(git diff --name-only "$BASE_SHA" "$HEAD_SHA" || true)
+          CHANGED="$(git diff --name-only "$BASE_SHA" "$HEAD_SHA" || true)"
 
           # Block changes outside submission files
-          BAD=$(echo "$CHANGED" | grep -vE '^submissions/inbox/.*/.*/(predictions\.csv|metadata\.json)$' || true)
+          BAD="$(echo "$CHANGED" | grep -vE '^submissions/inbox/.*/.*/(predictions\.csv|metadata\.json)$' || true)"
           if [ -n "$BAD" ]; then
             echo "❌ This PR can only add submission files."
             echo "Blocked changed files:"
@@ -54,21 +65,25 @@ jobs:
             exit 1
           fi
 
-          PRED=$(echo "$CHANGED" | grep -E '^submissions/inbox/.*/.*/predictions\.csv$' || true)
-          META=$(echo "$CHANGED" | grep -E '^submissions/inbox/.*/.*/metadata\.json$' || true)
+          PRED="$(echo "$CHANGED" | grep -E '^submissions/inbox/.*/.*/predictions\.csv$' || true)"
+          META="$(echo "$CHANGED" | grep -E '^submissions/inbox/.*/.*/metadata\.json$' || true)"
 
-          PCOUNT=$(echo "$PRED" | sed '/^\s*$/d' | wc -l | tr -d ' ')
-          MCOUNT=$(echo "$META" | sed '/^\s*$/d' | wc -l | tr -d ' ')
+          PCOUNT="$(echo "$PRED" | sed '/^\s*$/d' | wc -l | tr -d ' ')"
+          MCOUNT="$(echo "$META" | sed '/^\s*$/d' | wc -l | tr -d ' ')"
 
           if [ "$PCOUNT" -ne 1 ] || [ "$MCOUNT" -ne 1 ]; then
             echo "❌ Each PR must include exactly ONE predictions.csv and ONE metadata.json"
             echo "Found predictions: $PCOUNT, metadata: $MCOUNT"
+            echo "Predictions:"
+            echo "$PRED"
+            echo "Metadata:"
+            echo "$META"
             exit 1
           fi
 
           # Ensure they are in the same folder
-          PDIR=$(dirname "$PRED")
-          MDIR=$(dirname "$META")
+          PDIR="$(dirname "$PRED")"
+          MDIR="$(dirname "$META")"
           if [ "$PDIR" != "$MDIR" ]; then
             echo "❌ predictions.csv and metadata.json must be in the SAME run folder"
             echo "pred dir: $PDIR"
@@ -76,12 +91,13 @@ jobs:
             exit 1
           fi
 
-          echo "pred_file=$PRED" >> $GITHUB_OUTPUT
-          echo "meta_file=$META" >> $GITHUB_OUTPUT
-          echo "run_dir=$PDIR" >> $GITHUB_OUTPUT
+          echo "pred_file=$PRED" >> "$GITHUB_OUTPUT"
+          echo "meta_file=$META" >> "$GITHUB_OUTPUT"
+          echo "run_dir=$PDIR" >> "$GITHUB_OUTPUT"
 
       - name: Validate metadata.json content
         run: |
+          set -e
           python scoring/validate_metadata.py "${{ steps.detect.outputs.meta_file }}"
 
       - name: Read metadata fields
@@ -89,28 +105,29 @@ jobs:
         run: |
           set -e
           python - <<'PY'
-          import json
+          import json, os
 
-          path = "${{ steps.detect.outputs.meta_file }}"
+          path = os.environ["META_PATH"]
+          out_path = os.environ["GITHUB_OUTPUT"]
+
           with open(path, "r", encoding="utf-8") as f:
-            d = json.load(f)
+              d = json.load(f)
 
           team = str(d.get("team","")).strip()
           run_id = str(d.get("run_id","")).strip()
           author_type = str(d.get("author_type","")).strip().lower()
           model = str(d.get("model","")).strip()
-          notes = str(d.get("notes","") or "").strip()
+          notes = str(d.get("notes","") or "").strip().replace("\n"," ").replace("\r"," ").strip()
 
-          notes = notes.replace("\n", " ").replace("\r", " ").strip()
-
-          out_path = "${GITHUB_OUTPUT}"
           with open(out_path, "a", encoding="utf-8") as out:
-            out.write(f"team={team}\n")
-            out.write(f"run_id={run_id}\n")
-            out.write(f"author_type={author_type}\n")
-            out.write(f"model={model}\n")
-            out.write(f"notes={notes}\n")
+              out.write(f"team={team}\n")
+              out.write(f"run_id={run_id}\n")
+              out.write(f"author_type={author_type}\n")
+              out.write(f"model={model}\n")
+              out.write(f"notes={notes}\n")
           PY
+        env:
+          META_PATH: ${{ steps.detect.outputs.meta_file }}
 
       - name: Score submission (no leaderboard update)
         id: score
@@ -119,45 +136,9 @@ jobs:
           python scoring/score_submission.py --pred "${{ steps.detect.outputs.pred_file }}" > score.txt
           cat score.txt
 
-          SCORE=$(grep -Eo 'Macro-F1:\s*[0-9]+\.[0-9]+' score.txt | head -n 1 | grep -Eo '[0-9]+\.[0-9]+')
+          SCORE="$(grep -Eo 'Macro-F1:\s*[0-9]+(\.[0-9]+)?' score.txt | head -n 1 | grep -Eo '[0-9]+(\.[0-9]+)?')"
           if [ -z "$SCORE" ]; then
             echo "❌ Could not parse score output."
             exit 1
           fi
-          echo "macro_f1=$SCORE" >> $GITHUB_OUTPUT
-
-      - name: Comment score on PR
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const score = "${{ steps.score.outputs.macro_f1 }}";
-            const pred = "${{ steps.detect.outputs.pred_file }}";
-            const meta = "${{ steps.detect.outputs.meta_file }}";
-
-            const team = "${{ steps.meta.outputs.team }}";
-            const runId = "${{ steps.meta.outputs.run_id }}";
-            const authorType = "${{ steps.meta.outputs.author_type }}";
-            const model = "${{ steps.meta.outputs.model }}";
-            const notes = "${{ steps.meta.outputs.notes }}";
-
-            const notesLine = notes ? `- **Notes:** ${notes}\n` : "";
-            const body =
-`✅ **Submission scored**
-
-- **Team:** \`${team}\`
-- **Run:** \`${runId}\`
-- **Author type:** \`${authorType}\`
-- **Model:** \`${model}\`
-${notesLine}- **Macro-F1:** \`${score}\`
-
-- **predictions:** \`${pred}\`
-- **metadata:** \`${meta}\`
-
-ℹ️ Leaderboard updates after the PR is merged into **main**.`;
-
-            await github.rest.issues.createComment({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: context.issue.number,
-              body
-            });
+          echo "macro_f1=$SCORE" >> "$GITHUB_OUTPUT"
