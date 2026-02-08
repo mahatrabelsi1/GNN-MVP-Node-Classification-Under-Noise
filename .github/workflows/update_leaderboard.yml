@@ -1,4 +1,3 @@
-```yaml
 name: Update Leaderboard (on merge)
 
 on:
