@@ -104,10 +104,16 @@ def write_md(lb: pd.DataFrame) -> None:
     lines.append("| Rank | Team | Run | Author | Model | Macro-F1 | Submitted at |\n")
     lines.append("|---:|---|---|---|---|---:|---|\n")
 
+    last_score = None
+    last_rank = 0
     for i, row in lb_sorted.iterrows():
+        score = float(row["macro_f1"])
+        if i == 0 or score != last_score:
+            last_rank = i + 1
+            last_score = score
         lines.append(
-            f"| {i+1} | {row['team']} | {row['run_id']} | {row['author_type']} | {row['model']} | "
-            f"{float(row['macro_f1']):.6f} | {row['submitted_at']} |\n"
+            f"| {last_rank} | {row['team']} | {row['run_id']} | {row['author_type']} | {row['model']} | "
+            f"{score:.6f} | {row['submitted_at']} |\n"
         )
 
     with open(LB_MD, "w", encoding="utf-8") as f:
