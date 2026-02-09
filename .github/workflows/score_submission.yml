@@ -139,6 +139,40 @@ jobs:
         env:
           META_PATH: ${{ steps.detect.outputs.meta_file }}
 
+      - name: Enforce one submission per team
+        shell: bash
+        run: |
+          set -e
+          BASE_SHA="${{ github.event.pull_request.base.sha }}"
+          TEAM="${{ steps.meta.outputs.team }}"
+
+          if [ -z "$TEAM" ]; then
+            echo "❌ Could not read team from metadata.json"
+            exit 1
+          fi
+
+          if git cat-file -e "$BASE_SHA:leaderboard/leaderboard.csv" 2>/dev/null; then
+            git show "$BASE_SHA:leaderboard/leaderboard.csv" > /tmp/leaderboard.csv
+            python - <<'PY'
+            import csv
+            import os
+            team = os.environ["TEAM"].strip().lower()
+            if not team:
+                raise SystemExit(1)
+            with open("/tmp/leaderboard.csv", newline="", encoding="utf-8") as f:
+                reader = csv.DictReader(f)
+                for row in reader:
+                    if str(row.get("team","")).strip().lower() == team:
+                        print("❌ This team already has a submission on the leaderboard.")
+                        raise SystemExit(1)
+            print("✅ Team has no prior submissions.")
+            PY
+          else
+            echo "Leaderboard not found on base; skipping one-submission check."
+          fi
+        env:
+          TEAM: ${{ steps.meta.outputs.team }}
+
       - name: Score submission (no leaderboard update)
         id: score
         run: |

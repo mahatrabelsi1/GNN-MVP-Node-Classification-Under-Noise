@@ -481,20 +481,34 @@
       statTopTeam.textContent = best.team || "—";
       statLast.textContent = (sortMode === "latest" ? (view[0].submitted_at || "—") : (best.submitted_at || "—"));
 
+      // Precompute competition-style ranks (ties share same rank)
+      const ranks = [];
+      let lastScore = null;
+      let lastRank = 0;
+      view.forEach((r, idx) => {
+        const score = r.macro_f1;
+        if (idx === 0 || score !== lastScore){
+          lastRank = idx + 1;
+          lastScore = score;
+        }
+        ranks.push(lastRank);
+      });
+
       tbody.innerHTML = "";
       view.forEach((r, idx) => {
         const tr = document.createElement("tr");
 
         let cls = "";
-        if (idx === 0) cls = "gold";
-        else if (idx === 1) cls = "silver";
-        else if (idx === 2) cls = "bronze";
+        const rank = ranks[idx];
+        if (rank === 1) cls = "gold";
+        else if (rank === 2) cls = "silver";
+        else if (rank === 3) cls = "bronze";
 
         const notes = r.notes || "";
         const notesPill = notes ? `<span class="badge smallpill" title="${escHtml(notes)}">${escHtml(notes)}</span>` : `<span class="muted">—</span>`;
 
         tr.innerHTML = `
-          <td class="right"><span class="rank ${cls}">${idx+1}</span></td>
+          <td class="right"><span class="rank ${cls}">${rank}</span></td>
           <td><span class="badge">${escHtml(r.team)}</span></td>
           <td><span class="badge">${escHtml(r.run_id)}</span></td>
           <td><span class="badge">${escHtml(r.author_type)}</span></td>
