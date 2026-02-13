@@ -1,25 +1,94 @@
-name: Score Submission (PR)
+name: Score Submission (PR -> Leaderboard)
 
 on:
-  pull_request:
+  pull_request_target:
+    types: [opened, synchronize, reopened]
     paths:
       - "submissions/inbox/**/predictions.csv"
       - "submissions/inbox/**/metadata.json"
+  workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
   pull-requests: write
 
+concurrency:
+  group: leaderboard-update
+  cancel-in-progress: false
+
 jobs:
-  score:
+  score_and_update:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout PR branch
+      - name: Checkout main branch (target repo)
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.head_ref }}
+          ref: main
           fetch-depth: 0
+          path: repo_main
+
+      - name: Checkout PR head branch (submission source)
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.event.pull_request.head.repo.full_name }}
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          path: repo_pr
+          persist-credentials: false
+
+      - name: Detect and validate changed submission files
+        id: detect
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const pull_number = context.payload.pull_request.number;
+
+            const files = await github.paginate(github.rest.pulls.listFiles, {
+              owner,
+              repo,
+              pull_number,
+              per_page: 100
+            });
+
+            const allowed = /^submissions\/inbox\/.+\/.+\/(predictions\.csv|metadata\.json)$/;
+            const blocked = files
+              .map(f => f.filename)
+              .filter(name => !allowed.test(name));
+
+            if (blocked.length > 0) {
+              core.setFailed(
+                "This PR can only change submission files.\nBlocked files:\n" + blocked.join("\n")
+              );
+              return;
+            }
+
+            const preds = files
+              .map(f => f.filename)
+              .filter(name => /^submissions\/inbox\/.+\/.+\/predictions\.csv$/.test(name));
+            const metas = files
+              .map(f => f.filename)
+              .filter(name => /^submissions\/inbox\/.+\/.+\/metadata\.json$/.test(name));
+
+            if (preds.length !== 1 || metas.length !== 1) {
+              core.setFailed(
+                `Each PR must include exactly one predictions.csv and one metadata.json. Found predictions=${preds.length}, metadata=${metas.length}`
+              );
+              return;
+            }
+
+            const predDir = preds[0].split("/").slice(0, -1).join("/");
+            const metaDir = metas[0].split("/").slice(0, -1).join("/");
+            if (predDir !== metaDir) {
+              core.setFailed("predictions.csv and metadata.json must be in the same run folder.");
+              return;
+            }
+
+            core.setOutput("pred_file", preds[0]);
+            core.setOutput("meta_file", metas[0]);
+            core.setOutput("run_dir", predDir);
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -45,89 +114,39 @@ jobs:
           P8: ${{ secrets.TEST_LABELS_B64_08 }}
         run: |
           set -e
-          mkdir -p data/private
-
-          # If secrets are missing (e.g., PR from fork), fail with a clear message
+          mkdir -p repo_main/data/private
           if [ -z "$P1$P2$P3$P4$P5$P6$P7$P8" ]; then
-            echo "❌ TEST_LABELS_B64_01..08 secrets are not available to this workflow run."
-            echo "If this PR is from a fork, GitHub does not expose secrets to it."
+            echo "ERROR: Missing secrets TEST_LABELS_B64_01..08"
             exit 1
           fi
+          printf "%s%s%s%s%s%s%s%s" "$P1" "$P2" "$P3" "$P4" "$P5" "$P6" "$P7" "$P8" | base64 -d > repo_main/data/private/test_labels.csv
+          test -s repo_main/data/private/test_labels.csv
 
-          printf "%s%s%s%s%s%s%s%s" "$P1" "$P2" "$P3" "$P4" "$P5" "$P6" "$P7" "$P8" | base64 -d > data/private/test_labels.csv
-          test -s data/private/test_labels.csv
-
-      - name: Detect + validate submission files in this PR
-        id: detect
+      - name: Validate metadata.json
         run: |
           set -e
-          BASE_SHA="${{ github.event.pull_request.base.sha }}"
-          HEAD_SHA="${{ github.event.pull_request.head.sha }}"
-
-          CHANGED="$(git diff --name-only "$BASE_SHA" "$HEAD_SHA" || true)"
-
-          # Block changes outside submission files
-          BAD="$(echo "$CHANGED" | grep -vE '^submissions/inbox/.*/.*/(predictions\.csv|metadata\.json)$' || true)"
-          if [ -n "$BAD" ]; then
-            echo "❌ This PR can only add submission files."
-            echo "Blocked changed files:"
-            echo "$BAD"
-            exit 1
-          fi
-
-          PRED="$(echo "$CHANGED" | grep -E '^submissions/inbox/.*/.*/predictions\.csv$' || true)"
-          META="$(echo "$CHANGED" | grep -E '^submissions/inbox/.*/.*/metadata\.json$' || true)"
-
-          PCOUNT="$(echo "$PRED" | sed '/^\s*$/d' | wc -l | tr -d ' ')"
-          MCOUNT="$(echo "$META" | sed '/^\s*$/d' | wc -l | tr -d ' ')"
-
-          if [ "$PCOUNT" -ne 1 ] || [ "$MCOUNT" -ne 1 ]; then
-            echo "❌ Each PR must include exactly ONE predictions.csv and ONE metadata.json"
-            echo "Found predictions: $PCOUNT, metadata: $MCOUNT"
-            echo "Predictions:"
-            echo "$PRED"
-            echo "Metadata:"
-            echo "$META"
-            exit 1
-          fi
-
-          # Ensure they are in the same folder
-          PDIR="$(dirname "$PRED")"
-          MDIR="$(dirname "$META")"
-          if [ "$PDIR" != "$MDIR" ]; then
-            echo "❌ predictions.csv and metadata.json must be in the SAME run folder"
-            echo "pred dir: $PDIR"
-            echo "meta dir: $MDIR"
-            exit 1
-          fi
-
-          echo "pred_file=$PRED" >> "$GITHUB_OUTPUT"
-          echo "meta_file=$META" >> "$GITHUB_OUTPUT"
-          echo "run_dir=$PDIR" >> "$GITHUB_OUTPUT"
-
-      - name: Validate metadata.json content
-        run: |
-          set -e
-          python scoring/validate_metadata.py "${{ steps.detect.outputs.meta_file }}"
+          python repo_main/scoring/validate_metadata.py "repo_pr/${{ steps.detect.outputs.meta_file }}"
 
       - name: Read metadata fields
         id: meta
+        shell: bash
         run: |
           set -e
           python - <<'PY'
-          import json, os
+          import json
+          import os
 
-          path = os.environ["META_PATH"]
+          meta_path = os.environ["META_PATH"]
           out_path = os.environ["GITHUB_OUTPUT"]
 
-          with open(path, "r", encoding="utf-8") as f:
+          with open(meta_path, "r", encoding="utf-8") as f:
               d = json.load(f)
 
-          team = str(d.get("team","")).strip()
-          run_id = str(d.get("run_id","")).strip()
-          author_type = str(d.get("author_type","")).strip().lower()
-          model = str(d.get("model","")).strip()
-          notes = str(d.get("notes","") or "").strip().replace("\n"," ").replace("\r"," ").strip()
+          team = str(d.get("team", "")).strip()
+          run_id = str(d.get("run_id", "")).strip()
+          author_type = str(d.get("author_type", "")).strip().lower()
+          model = str(d.get("model", "")).strip()
+          notes = str(d.get("notes", "") or "").strip().replace("\n", " ").replace("\r", " ")
 
           with open(out_path, "a", encoding="utf-8") as out:
               out.write(f"team={team}\n")
@@ -137,52 +156,109 @@ jobs:
               out.write(f"notes={notes}\n")
           PY
         env:
-          META_PATH: ${{ steps.detect.outputs.meta_file }}
+          META_PATH: repo_pr/${{ steps.detect.outputs.meta_file }}
 
       - name: Enforce one submission per team
         shell: bash
         run: |
           set -e
-          BASE_SHA="${{ github.event.pull_request.base.sha }}"
-          TEAM="${{ steps.meta.outputs.team }}"
+          python - <<'PY'
+          import csv
+          import os
+          import sys
 
-          if [ -z "$TEAM" ]; then
-            echo "❌ Could not read team from metadata.json"
-            exit 1
-          fi
+          team = os.environ["TEAM"].strip().lower()
+          lb_path = "repo_main/leaderboard/leaderboard.csv"
 
-          if git cat-file -e "$BASE_SHA:leaderboard/leaderboard.csv" 2>/dev/null; then
-            git show "$BASE_SHA:leaderboard/leaderboard.csv" > /tmp/leaderboard.csv
-            python - <<'PY'
-            import csv
-            import os
-            team = os.environ["TEAM"].strip().lower()
-            if not team:
-                raise SystemExit(1)
-            with open("/tmp/leaderboard.csv", newline="", encoding="utf-8") as f:
-                reader = csv.DictReader(f)
-                for row in reader:
-                    if str(row.get("team","")).strip().lower() == team:
-                        print("❌ This team already has a submission on the leaderboard.")
-                        raise SystemExit(1)
-            print("✅ Team has no prior submissions.")
-            PY
-          else
-            echo "Leaderboard not found on base; skipping one-submission check."
-          fi
+          if not team:
+              print("Could not read team from metadata.json")
+              sys.exit(1)
+
+          if not os.path.exists(lb_path):
+              print("Leaderboard not found yet; allowing first submission.")
+              sys.exit(0)
+
+          with open(lb_path, newline="", encoding="utf-8") as f:
+              reader = csv.DictReader(f)
+              for row in reader:
+                  if str(row.get("team", "")).strip().lower() == team:
+                      print("This team already has a submission on the leaderboard.")
+                      sys.exit(1)
+
+          print("Team has no prior submissions.")
+          PY
         env:
           TEAM: ${{ steps.meta.outputs.team }}
 
-      - name: Score submission (no leaderboard update)
+      - name: Score and update leaderboard in main
         id: score
+        shell: bash
         run: |
           set -e
-          python scoring/score_submission.py --pred "${{ steps.detect.outputs.pred_file }}" > score.txt
+          cd repo_main
+          python scoring/update_leaderboard.py --pred "../repo_pr/${{ steps.detect.outputs.pred_file }}" > score.txt
           cat score.txt
 
-          SCORE="$(grep -Eo 'Macro-F1:\s*[0-9]+(\.[0-9]+)?' score.txt | head -n 1 | grep -Eo '[0-9]+(\.[0-9]+)?')"
+          SCORE="$(grep -Eo 'macro_f1.: [0-9]+(\.[0-9]+)?' score.txt | head -n 1 | grep -Eo '[0-9]+(\.[0-9]+)?' || true)"
           if [ -z "$SCORE" ]; then
-            echo "❌ Could not parse score output."
+            SCORE="$(grep -Eo 'Macro-F1:\s*[0-9]+(\.[0-9]+)?' score.txt | head -n 1 | grep -Eo '[0-9]+(\.[0-9]+)?' || true)"
+          fi
+          if [ -z "$SCORE" ]; then
+            echo "ERROR: Could not parse score output."
             exit 1
           fi
           echo "macro_f1=$SCORE" >> "$GITHUB_OUTPUT"
+
+      - name: Sync leaderboard CSV for GitHub Pages
+        run: |
+          set -e
+          cp repo_main/leaderboard/leaderboard.csv repo_main/docs/leaderboard.csv
+
+      - name: Commit leaderboard to main
+        shell: bash
+        run: |
+          set -e
+          cd repo_main
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          if git status --porcelain | grep -qE "(leaderboard/leaderboard\.(csv|md)|docs/leaderboard\.csv)"; then
+            git add leaderboard/leaderboard.csv leaderboard/leaderboard.md docs/leaderboard.csv
+            git commit -m "Leaderboard update: ${{ steps.meta.outputs.team }}/${{ steps.meta.outputs.run_id }}"
+            git push origin main
+          else
+            echo "No leaderboard changes to commit."
+          fi
+
+      - name: Comment result on PR
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const issue_number = context.payload.pull_request.number;
+            const team = "${{ steps.meta.outputs.team }}";
+            const runId = "${{ steps.meta.outputs.run_id }}";
+            const score = "${{ steps.score.outputs.macro_f1 }}";
+            const body =
+              `Submission scored and leaderboard updated.\n\n` +
+              `- Team: \`${team}\`\n` +
+              `- Run: \`${runId}\`\n` +
+              `- Macro-F1: \`${score}\`\n\n` +
+              `This PR can be closed without merge because leaderboard files were already committed to \`main\`.`;
+
+            await github.rest.issues.createComment({ owner, repo, issue_number, body });
+
+      - name: Close PR after processing
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const pull_number = context.payload.pull_request.number;
+            await github.rest.pulls.update({
+              owner,
+              repo,
+              pull_number,
+              state: "closed"
+            });
