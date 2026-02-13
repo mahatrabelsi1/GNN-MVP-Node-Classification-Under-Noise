@@ -199,14 +199,29 @@ jobs:
           python scoring/update_leaderboard.py --pred "../repo_pr/${{ steps.detect.outputs.pred_file }}" > score.txt
           cat score.txt
 
-          SCORE="$(grep -Eo 'macro_f1.: [0-9]+(\.[0-9]+)?' score.txt | head -n 1 | grep -Eo '[0-9]+(\.[0-9]+)?' || true)"
-          if [ -z "$SCORE" ]; then
-            SCORE="$(grep -Eo 'Macro-F1:\s*[0-9]+(\.[0-9]+)?' score.txt | head -n 1 | grep -Eo '[0-9]+(\.[0-9]+)?' || true)"
-          fi
-          if [ -z "$SCORE" ]; then
-            echo "ERROR: Could not parse score output."
+          # Read score from leaderboard CSV to avoid fragile log parsing.
+          SCORE="$(python - <<'PY'
+          import csv
+          import sys
+
+          team = "${{ steps.meta.outputs.team }}".strip().lower()
+          run_id = "${{ steps.meta.outputs.run_id }}".strip()
+          score = None
+
+          with open("leaderboard/leaderboard.csv", newline="", encoding="utf-8") as f:
+              for row in csv.DictReader(f):
+                  if row.get("team", "").strip().lower() == team and row.get("run_id", "").strip() == run_id:
+                      score = row.get("macro_f1", "").strip()
+
+          if not score:
+              sys.exit(1)
+          print(score)
+          PY
+          )" || {
+            echo "ERROR: Could not read score from leaderboard/leaderboard.csv"
             exit 1
-          fi
+          }
+
           echo "macro_f1=$SCORE" >> "$GITHUB_OUTPUT"
 
       - name: Sync leaderboard CSV for GitHub Pages
