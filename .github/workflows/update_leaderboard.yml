@@ -1,11 +1,6 @@
-name: Update Leaderboard (on merge)
+name: Rebuild Leaderboard (manual)
 
 on:
-  push:
-    branches: ["main"]
-    paths:
-      - "submissions/inbox/**/predictions.csv"
-      - "submissions/inbox/**/metadata.json"
   workflow_dispatch:
 
 permissions:
@@ -19,6 +14,7 @@ jobs:
       - name: Checkout main
         uses: actions/checkout@v4
         with:
+          ref: main
           fetch-depth: 0
 
       - name: Set up Python
@@ -53,18 +49,14 @@ jobs:
           printf "%s%s%s%s%s%s%s%s" "$P1" "$P2" "$P3" "$P4" "$P5" "$P6" "$P7" "$P8" | base64 -d > data/private/test_labels.csv
           test -s data/private/test_labels.csv
 
-      - name: Update leaderboard (score all submissions)
+      - name: Rebuild leaderboard from existing submissions
         run: |
           set -e
           python scoring/update_leaderboard_all.py
-
-      - name: Copy leaderboard CSV into docs for GitHub Pages
-        run: |
-          set -e
-          mkdir -p docs
           cp leaderboard/leaderboard.csv docs/leaderboard.csv
 
-      - name: Commit leaderboard
+      - name: Commit rebuilt leaderboard
+        shell: bash
         run: |
           set -e
           git config user.name "github-actions[bot]"
@@ -72,8 +64,8 @@ jobs:
 
           if git status --porcelain | grep -qE "(leaderboard/leaderboard\.(csv|md)|docs/leaderboard\.csv)"; then
             git add leaderboard/leaderboard.csv leaderboard/leaderboard.md docs/leaderboard.csv
-            git commit -m "Update leaderboard"
-            git push
+            git commit -m "Rebuild leaderboard"
+            git push origin main
           else
             echo "No leaderboard changes to commit."
           fi
