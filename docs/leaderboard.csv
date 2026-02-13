@@ -2,3 +2,4 @@ team,run_id,macro_f1,submitted_at,author_type,model,notes
 this-is-a-test2,test22,0.477531187856458,2026-02-09 12:50:45 UTC,human,human,nothing new
 demo,run1,0.0810629958894943,2026-02-09 13:44:16 UTC,human,baseline,demo submission for testing
 this-is-a-test3,test3,0.477531187856458,2026-02-09 13:44:17 UTC,human,human,nothing new
+Team test,teamtest,0.47807304731528333,2026-02-13 11:29:09 UTC,human,human,we win
