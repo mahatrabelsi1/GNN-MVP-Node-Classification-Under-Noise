@@ -123,6 +123,7 @@ def write_md(lb: pd.DataFrame) -> None:
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--pred", type=str, default="", help="Path to predictions.csv to score (optional)")
+    ap.add_argument("--meta", type=str, default="", help="Path to metadata.json (optional)")
     args = ap.parse_args()
 
     ensure_leaderboard_exists()
@@ -134,8 +135,10 @@ def main():
     else:
         pred_path = find_latest_predictions()
 
-    # Read metadata from the same folder
-    meta_path = metadata_path_from_pred(pred_path)
+    # Read metadata from explicit path or from the same folder as predictions.
+    meta_path = args.meta.strip() if args.meta else metadata_path_from_pred(pred_path)
+    if args.meta and not os.path.exists(meta_path):
+        raise FileNotFoundError(f"--meta file not found: {meta_path}")
     meta = load_metadata(meta_path)
 
     # Score

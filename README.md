@@ -1,112 +1,69 @@
 # DiaGraph - Robust Diabetes Prediction on Noisy Graphs
 
-DiaGraph is a prediction-only GitHub mini-competition for graph machine learning.
+DiaGraph is a prediction-only graph ML mini-competition.
 
-It is not an application.  
-It is a benchmark and evaluation pipeline where participants train models locally and submit only prediction files via Pull Requests.
+Participants train locally and submit encrypted predictions via Pull Request. GitHub Actions decrypts, scores, and updates the leaderboard automatically.
 
----
+## Core Task
 
-## What This Project Is
+- Problem: supervised node classification
+- Target: `diabetes` (binary)
+- Public inputs: node features + graph edges
+- Hidden target: test labels used only in CI
+- Metric: Macro F1 at threshold 0.5
 
-This project is:
+## Graph Specification
 
-- Supervised learning (train/val labels are provided)
-- Graph machine learning task
-- Node classification problem  
-  (each node = one patient, predict diabetes label per node)
-- A robustness-oriented benchmark  
-  (class imbalance, graph sparsity, missingness indicators, hidden test labels)
+- Node feature matrix `X`: `data/public/nodes.csv`
+- Adjacency matrix `A`: `data/public/edges.csv` with (`src`, `dst`)
+- Node ids are in column `id` and must align across files
 
-One-line description:
-
-> A supervised graph node classification benchmark for robust diabetes prediction under noisy conditions.
-
----
-
-## Objective
-
-Predict whether a node represents a diabetic patient (binary classification) using:
-
-- Node features (clinical attributes)
-- Graph edges / adjacency (similarity relations between patients)
-
-Both GNN models and non-GNN baselines are allowed.
-
----
-
-## Graph Specification (Mandatory)
-
-- Node feature matrix X: `data/public/nodes.csv`
-  - Column `id` is the node id (0-based).
-  - All other columns are node features.
-- Adjacency matrix A: `data/public/edges.csv`
-  - Each row is a directed edge (`src`, `dst`) using the same node ids.
-
-Dataset sizes (current release):
-- Nodes: 96,128
-- Edges: 1,224,756
-- Graph density (directed): ~0.013%
-
----
-
-## Dataset Difficulty and Realism
-
-This competition includes meaningful challenges:
-
-- Class imbalance: positive class rate is ~12.44% on train+val.
-- Graph sparsity: the graph is very sparse (density ~0.013%).
-- Missingness indicators: features include missingness flags (e.g., `HbA1c_missing`).
-
----
-
-## Evaluation Metric
-
-Macro F1-score with threshold = 0.5
-
-- Evaluates both classes equally
-- Strongly penalizes predicting only the majority class
-
-Leaderboard ranking follows competition-style rules: tied scores share the same rank (1,2,2,4).
-
----
-
-## Repository Data
-
-### Public data (committed)
+## Data Layout
 
 ```text
 data/public/
-├── nodes.csv           # node features ONLY (no labels)
-├── edges.csv           # adjacency list (graph edges)
-├── train.csv           # node ids + labels (training)
-├── val.csv             # node ids + labels (validation)
-├── test_nodes.csv      # node ids ONLY (final test for predictions)
-├── sample_submission.csv
+  nodes.csv
+  edges.csv
+  train.csv
+  val.csv
+  test_nodes.csv
+  sample_submission.csv
 ```
 
-### Private data (never committed)
+Private data is never committed:
 
 ```text
-data/private/
-└── test_labels.csv     # hidden ground truth (used only in CI scoring)
+data/private/test_labels.csv
 ```
 
-Test labels are injected securely during GitHub Actions via Secrets.
+## Security Model
 
----
+Private submissions must not be publicly readable.
 
-## Submission (STRICT)
+- Participants submit only encrypted prediction files (`predictions.csv.enc`)
+- Public key is published in `encryption/public_key.pem`
+- Private key stays in GitHub Secrets only
+- CI decrypts in runner memory/disk, scores, updates leaderboard, and removes decrypted artifacts
 
-### Required folder structure
+## Submission Format
+
+Run folder:
 
 ```text
 submissions/inbox/<team>/<run_id>/
-├── predictions.csv
-└── metadata.json
+  predictions.csv.enc
+  metadata.json
 ```
 
-### predictions.csv format
+`metadata.json` required fields:
+
+- `team`
+- `run_id`
+- `author_type` in `human|llm|hybrid`
+- `model`
+- `notes` (optional)
+
+Plain predictions schema before encryption:
 
 ```csv
 id,y_pred
@@ -117,102 +74,70 @@ id,y_pred
 
 Rules:
 
-- `id` must match exactly the ids in `data/public/test_nodes.csv`
-- `y_pred` must be a probability in [0, 1]
-- Row count must match `test_nodes.csv`
+- `id` must match `data/public/test_nodes.csv` exactly
+- `y_pred` must be in `[0, 1]`
+- Exactly one attempt per team (enforced in CI)
 
-### metadata.json format
+## How Participants Submit
 
-Copy from:
+1. Generate plain predictions locally (`predictions.csv` with `id,y_pred`)
+2. Encrypt with repository public key:
 
-```text
-submissions/inbox/metadata_template.json
+```bash
+python encryption/encrypt.py predictions.csv encryption/public_key.pem predictions.csv.enc
 ```
 
-Example:
+3. Place `predictions.csv.enc` and `metadata.json` under:
 
 ```text
-{
-  "team": "my_team",
-  "run_id": "gcn_v1",
-  "author_type": "human",
-  "model": "GCN + MLP",
-  "notes": "Used edges + class weights"
-}
+submissions/inbox/<team>/<run_id>/
 ```
 
-Allowed author_type values:
+4. Open PR to `main` with only those 2 files
 
-```text
-human
-llm
-hybrid
+What CI does on PR:
+
+- validates changed paths and metadata
+- restores hidden labels and private key from secrets
+- decrypts `predictions.csv.enc`
+- computes Macro-F1
+- updates `leaderboard/leaderboard.csv`, `leaderboard/leaderboard.md`, `docs/leaderboard.csv` on `main`
+- comments score on PR and closes PR (no manual merge needed)
+
+## Maintainer Key Setup
+
+Generate key pair once:
+
+```bash
+python encryption/generate_keys.py
 ```
 
----
+- Commit only `encryption/public_key.pem`
+- Do not commit `encryption/private_key.pem`
 
-## Submission Policy
+Store private key in repo secrets as base64 chunks:
 
-- One submission attempt per participant (enforced in CI).
-- Do not submit code - predictions only.
-- PRs must modify only the two submission files.
+- `SUBMISSION_PRIVATE_KEY_B64_01` ... `SUBMISSION_PRIVATE_KEY_B64_08`
 
----
+Also keep hidden test labels secrets:
 
-## LLM Usage Restriction
+- `TEST_LABELS_B64_01` ... `TEST_LABELS_B64_08`
 
-Large Language Models must not be used to fully design the competition, including dataset creation, task definition, or evaluation logic.
+PowerShell helper to create chunk values from the private key:
 
----
+```powershell
+$b64 = [Convert]::ToBase64String([IO.File]::ReadAllBytes("encryption/private_key.pem"))
+$size = [Math]::Ceiling($b64.Length / 8)
+0..7 | ForEach-Object { $b64.Substring($_ * $size, [Math]::Min($size, $b64.Length - ($_ * $size))) }
+```
 
-## Computational Affordability
+## Manual Rebuild
 
-Full training should not exceed 3 hours on CPU for this competition. If your approach requires more, it is not permitted.
+Manual workflow `Rebuild Leaderboard (manual)` decrypts all encrypted submissions and rebuilds leaderboard from scratch.
 
----
-
-## Duplicate Competitions
-
-Overlapping or duplicate competitions will be merged, or only the best-designed version will be retained.
-
----
-
-## Automatic Scoring (GitHub Actions)
-
-On Pull Request:
-
-- Validates folder structure
-- Validates metadata.json
-- Scores predictions.csv
-- Posts Macro-F1 + metadata as a PR comment
-- Does not update leaderboard yet
-
-On merge to main:
-
-- Detects the merged submission
-- Scores it again
-- Updates and commits the leaderboard
-
----
-
-## Leaderboard
-
-Source of truth: GitHub Pages at `docs/leaderboard.html` (data from `docs/leaderboard.csv`).
-
-Markdown: `leaderboard/leaderboard.md`  
-Interactive UI: `docs/leaderboard.html`
-
----
-
-## Rules (Summary)
+## Policy Notes
 
 - No external data
-- Do not modify:
-  - `data/`
-  - `scoring/`
-  - `.github/workflows/`
-  - `leaderboard/`
-- Train locally
-- Submit only predictions.csv + metadata.json in the correct folder
-
-Invalid submissions will be rejected automatically.
+- LLMs must not fully design the competition dataset/task/evaluation logic
+- Intended CPU affordability target: full training <= 3 hours
+- Tied scores share rank (competition ranking style)

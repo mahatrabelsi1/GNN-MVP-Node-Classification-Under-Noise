@@ -11,5 +11,6 @@ venv/
 env/
 
 data/private/
+encryption/private_key.pem
 data/raw/
 src/

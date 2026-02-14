@@ -26,7 +26,7 @@ jobs:
         run: |
           set -e
           python -m pip install --upgrade pip
-          pip install pandas scikit-learn numpy
+          pip install pandas scikit-learn numpy cryptography
 
       - name: Restore hidden test labels (secret)
         shell: bash
@@ -49,10 +49,31 @@ jobs:
           printf "%s%s%s%s%s%s%s%s" "$P1" "$P2" "$P3" "$P4" "$P5" "$P6" "$P7" "$P8" | base64 -d > data/private/test_labels.csv
           test -s data/private/test_labels.csv
 
+      - name: Restore submission private key (secret)
+        shell: bash
+        env:
+          K1: ${{ secrets.SUBMISSION_PRIVATE_KEY_B64_01 }}
+          K2: ${{ secrets.SUBMISSION_PRIVATE_KEY_B64_02 }}
+          K3: ${{ secrets.SUBMISSION_PRIVATE_KEY_B64_03 }}
+          K4: ${{ secrets.SUBMISSION_PRIVATE_KEY_B64_04 }}
+          K5: ${{ secrets.SUBMISSION_PRIVATE_KEY_B64_05 }}
+          K6: ${{ secrets.SUBMISSION_PRIVATE_KEY_B64_06 }}
+          K7: ${{ secrets.SUBMISSION_PRIVATE_KEY_B64_07 }}
+          K8: ${{ secrets.SUBMISSION_PRIVATE_KEY_B64_08 }}
+        run: |
+          set -e
+          mkdir -p data/private
+          if [ -z "$K1$K2$K3$K4$K5$K6$K7$K8" ]; then
+            echo "ERROR: Missing secrets SUBMISSION_PRIVATE_KEY_B64_01..08"
+            exit 1
+          fi
+          printf "%s%s%s%s%s%s%s%s" "$K1" "$K2" "$K3" "$K4" "$K5" "$K6" "$K7" "$K8" | base64 -d > data/private/submission_private_key.pem
+          test -s data/private/submission_private_key.pem
+
       - name: Rebuild leaderboard from existing submissions
         run: |
           set -e
-          python scoring/update_leaderboard_all.py
+          python scoring/update_leaderboard_all_encrypted.py
           cp leaderboard/leaderboard.csv docs/leaderboard.csv
 
       - name: Commit rebuilt leaderboard

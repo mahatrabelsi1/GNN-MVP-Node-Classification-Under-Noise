@@ -4,7 +4,7 @@ on:
   pull_request_target:
     types: [opened, synchronize, reopened]
     paths:
-      - "submissions/inbox/**/predictions.csv"
+      - "submissions/inbox/**/predictions.csv.enc"
       - "submissions/inbox/**/metadata.json"
   workflow_dispatch:
 
@@ -53,7 +53,7 @@ jobs:
               per_page: 100
             });
 
-            const allowed = /^submissions\/inbox\/.+\/.+\/(predictions\.csv|metadata\.json)$/;
+            const allowed = /^submissions\/inbox\/.+\/.+\/(predictions\.csv\.enc|metadata\.json)$/;
             const blocked = files
               .map(f => f.filename)
               .filter(name => !allowed.test(name));
@@ -67,14 +67,14 @@ jobs:
 
             const preds = files
               .map(f => f.filename)
-              .filter(name => /^submissions\/inbox\/.+\/.+\/predictions\.csv$/.test(name));
+              .filter(name => /^submissions\/inbox\/.+\/.+\/predictions\.csv\.enc$/.test(name));
             const metas = files
               .map(f => f.filename)
               .filter(name => /^submissions\/inbox\/.+\/.+\/metadata\.json$/.test(name));
 
             if (preds.length !== 1 || metas.length !== 1) {
               core.setFailed(
-                `Each PR must include exactly one predictions.csv and one metadata.json. Found predictions=${preds.length}, metadata=${metas.length}`
+                `Each PR must include exactly one predictions.csv.enc and one metadata.json. Found encrypted predictions=${preds.length}, metadata=${metas.length}`
               );
               return;
             }
@@ -82,7 +82,7 @@ jobs:
             const predDir = preds[0].split("/").slice(0, -1).join("/");
             const metaDir = metas[0].split("/").slice(0, -1).join("/");
             if (predDir !== metaDir) {
-              core.setFailed("predictions.csv and metadata.json must be in the same run folder.");
+              core.setFailed("predictions.csv.enc and metadata.json must be in the same run folder.");
               return;
             }
 
@@ -99,7 +99,7 @@ jobs:
         run: |
           set -e
           python -m pip install --upgrade pip
-          pip install pandas scikit-learn numpy
+          pip install pandas scikit-learn numpy cryptography
 
       - name: Restore hidden test labels (secret)
         shell: bash
@@ -121,6 +121,27 @@ jobs:
           fi
           printf "%s%s%s%s%s%s%s%s" "$P1" "$P2" "$P3" "$P4" "$P5" "$P6" "$P7" "$P8" | base64 -d > repo_main/data/private/test_labels.csv
           test -s repo_main/data/private/test_labels.csv
+
+      - name: Restore submission private key (secret)
+        shell: bash
+        env:
+          K1: ${{ secrets.SUBMISSION_PRIVATE_KEY_B64_01 }}
+          K2: ${{ secrets.SUBMISSION_PRIVATE_KEY_B64_02 }}
+          K3: ${{ secrets.SUBMISSION_PRIVATE_KEY_B64_03 }}
+          K4: ${{ secrets.SUBMISSION_PRIVATE_KEY_B64_04 }}
+          K5: ${{ secrets.SUBMISSION_PRIVATE_KEY_B64_05 }}
+          K6: ${{ secrets.SUBMISSION_PRIVATE_KEY_B64_06 }}
+          K7: ${{ secrets.SUBMISSION_PRIVATE_KEY_B64_07 }}
+          K8: ${{ secrets.SUBMISSION_PRIVATE_KEY_B64_08 }}
+        run: |
+          set -e
+          mkdir -p repo_main/data/private
+          if [ -z "$K1$K2$K3$K4$K5$K6$K7$K8" ]; then
+            echo "ERROR: Missing secrets SUBMISSION_PRIVATE_KEY_B64_01..08"
+            exit 1
+          fi
+          printf "%s%s%s%s%s%s%s%s" "$K1" "$K2" "$K3" "$K4" "$K5" "$K6" "$K7" "$K8" | base64 -d > repo_main/data/private/submission_private_key.pem
+          test -s repo_main/data/private/submission_private_key.pem
 
       - name: Validate metadata.json
         run: |
@@ -190,13 +211,25 @@ jobs:
         env:
           TEAM: ${{ steps.meta.outputs.team }}
 
+      - name: Decrypt encrypted predictions
+        shell: bash
+        run: |
+          set -e
+          python repo_main/encryption/decrypt.py \
+            "repo_pr/${{ steps.detect.outputs.pred_file }}" \
+            "repo_main/data/private/submission_private_key.pem" \
+            "repo_main/data/private/predictions_decrypted.csv"
+          test -s repo_main/data/private/predictions_decrypted.csv
+
       - name: Score and update leaderboard in main
         id: score
         shell: bash
         run: |
           set -e
           cd repo_main
-          python scoring/update_leaderboard.py --pred "../repo_pr/${{ steps.detect.outputs.pred_file }}" > score.txt
+          python scoring/update_leaderboard.py \
+            --pred "data/private/predictions_decrypted.csv" \
+            --meta "../repo_pr/${{ steps.detect.outputs.meta_file }}" > score.txt
           cat score.txt
 
           # Read score from leaderboard CSV to avoid fragile log parsing.
@@ -245,6 +278,13 @@ jobs:
             echo "No leaderboard changes to commit."
           fi
 
+      - name: Cleanup decrypted artifacts
+        if: always()
+        shell: bash
+        run: |
+          rm -f repo_main/data/private/predictions_decrypted.csv
+          rm -f repo_main/data/private/submission_private_key.pem
+
       - name: Comment result on PR
         uses: actions/github-script@v7
         with:
@@ -256,7 +296,7 @@ jobs:
             const runId = "${{ steps.meta.outputs.run_id }}";
             const score = "${{ steps.score.outputs.macro_f1 }}";
             const body =
-              `Submission scored and leaderboard updated.\n\n` +
+              `Encrypted submission scored and leaderboard updated.\n\n` +
               `- Team: \`${team}\`\n` +
               `- Run: \`${runId}\`\n` +
               `- Macro-F1: \`${score}\`\n\n` +
