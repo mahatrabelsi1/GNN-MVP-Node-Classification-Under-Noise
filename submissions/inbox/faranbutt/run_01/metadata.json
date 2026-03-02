@@ -1,0 +1,8 @@
+{
+    "team": "faranbutt",
+    "run_id": "run_01",
+    "author_type": "human",
+    "model": "GAT(8-heads, LayerNorm)",
+    "notes": "Here is my submission for DiaGraph Competetion "
+  }
+  
