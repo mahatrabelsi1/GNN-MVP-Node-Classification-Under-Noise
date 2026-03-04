@@ -1,0 +1,7 @@
+{
+  "team": "emmanuel_owusu",
+  "run_id": "run1",
+  "author_type": "human",
+  "model": "GraphSAGE",
+  "notes": "2-layer GraphSAGE with layernormalization, and class weighting"
+}
