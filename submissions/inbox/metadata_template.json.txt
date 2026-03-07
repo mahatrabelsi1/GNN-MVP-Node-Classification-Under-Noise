@@ -1,0 +1,7 @@
+{
+  "team": "my_team",
+  "run_id": "gcn_v1",
+  "author_type": "human",
+  "model": "GCN + MLP",
+  "notes": "Used edges + class weights"
+}
