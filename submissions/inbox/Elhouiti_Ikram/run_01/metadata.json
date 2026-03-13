@@ -1,0 +1,7 @@
+{
+    "team": "Elhouiti_Ikram",
+    "run_id": "run_03",
+    "author_type": "hybrid",
+    "model": "GCN",
+    "notes": "llm used to find the reason of the loss NAN values"
+  }
