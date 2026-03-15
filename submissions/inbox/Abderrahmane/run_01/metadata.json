@@ -1,0 +1,7 @@
+{
+    "team": "Abderrahmane",
+    "run_id": "run_01",
+    "author_type": "human",
+    "model": "GAT",
+    "notes": "Transductive settings"
+}
