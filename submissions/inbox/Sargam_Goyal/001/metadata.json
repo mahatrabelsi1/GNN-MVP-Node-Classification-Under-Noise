@@ -1,0 +1,7 @@
+{
+    "team": "Sargam_Goyal",
+    "run_id": "01",
+    "author_type": "human",
+    "model": "BiGCN",
+    "notes": "Used focal loss"
+  }
