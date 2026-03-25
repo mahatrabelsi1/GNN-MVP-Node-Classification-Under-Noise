@@ -14,66 +14,39 @@ val_df = pd.read_csv("data/public/val.csv")
 test_df = pd.read_csv("data/public/test_nodes.csv")
 
 # =========================
-# 2. HANDLE NODE IDs SAFELY
+# 2. FEATURES
 # =========================
-
-# Detect node id column
-if "node_id" in nodes.columns:
-    node_id_col = "node_id"
-elif "id" in nodes.columns:
-    node_id_col = "id"
-else:
-    node_id_col = None
-
-# Features
-if node_id_col:
-    X = nodes.drop(columns=[node_id_col]).values
-else:
-    X = nodes.values
-
+# nodes.csv has 'id' column → remove it
+X = nodes.drop(columns=["id"]).values
 x = torch.tensor(X, dtype=torch.float)
 
 # =========================
-# 3. EDGE INDEX
+# 3. GRAPH STRUCTURE
 # =========================
 edge_index = torch.tensor(edges.values.T, dtype=torch.long)
 
 # =========================
-# 4. HANDLE TRAIN/VAL IDS
-# =========================
-
-def get_id_col(df):
-    if "node_id" in df.columns:
-        return "node_id"
-    elif "id" in df.columns:
-        return "id"
-    else:
-        raise ValueError("No ID column found!")
-
-train_id_col = get_id_col(train_df)
-val_id_col = get_id_col(val_df)
-test_id_col = get_id_col(test_df)
-
-# =========================
-# 5. LABEL VECTOR
+# 4. LABELS
 # =========================
 num_nodes = len(nodes)
+
 y = torch.full((num_nodes,), -1, dtype=torch.long)
 
-y[train_df[train_id_col].values] = torch.tensor(train_df["label"].values)
-y[val_df[val_id_col].values] = torch.tensor(val_df["label"].values)
+# IMPORTANT: label column is 'diabetes'
+y[train_df["id"].values] = torch.tensor(train_df["diabetes"].values)
+y[val_df["id"].values] = torch.tensor(val_df["diabetes"].values)
 
 # Masks
 train_mask = torch.zeros(num_nodes, dtype=torch.bool)
 val_mask = torch.zeros(num_nodes, dtype=torch.bool)
 
-train_mask[train_df[train_id_col].values] = True
-val_mask[val_df[val_id_col].values] = True
+train_mask[train_df["id"].values] = True
+val_mask[val_df["id"].values] = True
 
 data = Data(x=x, edge_index=edge_index, y=y)
 
 # =========================
-# 6. MODEL
+# 5. MODEL (Simple GCN)
 # =========================
 class GCN(torch.nn.Module):
     def __init__(self, in_channels, hidden_channels, out_channels):
@@ -92,13 +65,14 @@ model = GCN(x.shape[1], 64, 2)
 optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
 
 # =========================
-# 7. TRAINING
+# 6. TRAINING
 # =========================
 for epoch in range(200):
     model.train()
     optimizer.zero_grad()
 
     out = model(data.x, data.edge_index)
+
     loss = F.cross_entropy(out[train_mask], data.y[train_mask])
 
     loss.backward()
@@ -114,7 +88,7 @@ for epoch in range(200):
         print(f"Epoch {epoch}, Loss: {loss.item():.4f}, Val Acc: {val_acc:.4f}")
 
 # =========================
-# 8. PREDICTIONS
+# 7. PREDICTIONS (PROBABILITIES)
 # =========================
 model.eval()
 with torch.no_grad():
@@ -122,13 +96,20 @@ with torch.no_grad():
     probs = F.softmax(out, dim=1)[:, 1].cpu().numpy()
 
 # =========================
-# 9. SUBMISSION FILE
+# 8. CREATE SUBMISSION
 # =========================
 submission = pd.DataFrame({
-    "id": test_df[test_id_col],
-    "y_pred": probs[test_df[test_id_col]]
+    "id": test_df["id"],
+    "y_pred": probs[test_df["id"]]
 })
 
 submission.to_csv("predictions.csv", index=False)
 
 print("✅ predictions.csv generated successfully!")
+
+# =========================
+# 9. SANITY CHECK
+# =========================
+print("Min prob:", probs.min())
+print("Max prob:", probs.max())
+print("Total test samples:", len(test_df))
