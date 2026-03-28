@@ -1,0 +1,7 @@
+{
+  "team": "Muhammad_Isah",
+  "run_id": "run_01",
+  "author_type": "human",
+  "model": "GCNConv",
+  "notes": "Compact GCNConv with seed 25 and label smoothing"
+}
