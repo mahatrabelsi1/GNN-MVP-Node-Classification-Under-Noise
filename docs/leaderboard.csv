@@ -6,4 +6,5 @@ samuel,run_01,0.4987805457343628,2026-03-10 10:26:23 UTC,human,GCNConv,"Stable m
 Elhouiti_Ikram,run_03,0.8223775090830094,2026-03-13 00:44:49 UTC,hybrid,GCN,llm used to find the reason of the loss NAN values
 Abderrahmane,run_01,0.5010770570203402,2026-03-15 00:20:06 UTC,human,GAT,Transductive settings
 Sargam_Goyal,01,0.5001833741897774,2026-03-21 08:59:47 UTC,human,BiGCN,Used focal loss
-AIkram,run_1,0.48405216674991364,2026-03-28 16:55:17 UTC,human,GraphSAGE,"3-layer GraphSAGE with StandardScaler, gradient clipping, weighted CE for class imbalance"
+AIkram,run_1,0.4840521667499136,2026-03-28 16:55:17 UTC,human,GraphSAGE,"3-layer GraphSAGE with StandardScaler, gradient clipping, weighted CE for class imbalance"
+Muhammad_Isah,run_01,0.72236984259086,2026-03-28 21:26:42 UTC,human,GCNConv,Compact GCNConv with seed 25 and label smoothing
