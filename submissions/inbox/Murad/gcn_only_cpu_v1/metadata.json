@@ -1,0 +1,7 @@
+{
+  "team": "Murad",
+  "run_id": "gcn_v1",
+  "author_type": "human",
+  "model": "GCN (2-layer) top2 ensemble from 5-run GCN search",
+  "notes": "Seed=25, 5-run manual search, GCN only, early stopping, class-balanced BCE, label smoothing, CPU Colab"
+}
