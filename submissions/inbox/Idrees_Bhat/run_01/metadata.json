@@ -1,0 +1,8 @@
+{
+    "team": "Mohammad_Idrees_Bhat",
+    "run_id": "run_01",
+    "author_type": "human",
+    "model": "Simple_GCN",
+    "notes": "Simple GCN baseline for node classification under noise"
+  }
+  

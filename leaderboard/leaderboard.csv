@@ -1,2 +1,8 @@
 team,run_id,macro_f1,submitted_at,author_type,model,notes
-this-is-a-test2,test22,0.477531187856458,2026-02-09 12:50:45 UTC,human,human,nothing new
+faranbutt,run_01,0.7808776365939898,2026-03-02 09:10:19 UTC,human,"GAT(8-heads, LayerNorm)",Here is my submission for DiaGraph Competetion
+emmanuel_owusu,run1,0.5046070977757431,2026-03-04 15:36:52 UTC,human,GraphSAGE,"2-layer GraphSAGE with layernormalization, and class weighting"
+Team_Sanae,run_01,0.4769289367722276,2026-03-08 00:17:41 UTC,hybrid,GraphSage,llm to fix the data loading issue
+samuel,run_01,0.4987805457343628,2026-03-10 10:26:23 UTC,human,GCNConv,"Stable model with BatchNorm, Gradient clipping and self-loops"
+Elhouiti_Ikram,run_03,0.8223775090830094,2026-03-13 00:44:49 UTC,hybrid,GCN,llm used to find the reason of the loss NAN values
+Abderrahmane,run_01,0.5010770570203402,2026-03-15 00:20:06 UTC,human,GAT,Transductive settings
+Sargam_Goyal,01,0.5001833741897774,2026-03-21 08:59:47 UTC,human,BiGCN,Used focal loss
