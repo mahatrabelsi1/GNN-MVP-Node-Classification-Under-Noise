@@ -1,5 +1,5 @@
 {
-  "team": "Tuga",
+  "team": "Tuga Yousif",
   "run_id": "run3",
   "author_type": "human",
   "model": "GCNConv + dropout+norm",
