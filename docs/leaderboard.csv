@@ -10,3 +10,4 @@ AIkram,run_1,0.4840521667499136,2026-03-28 16:55:17 UTC,human,GraphSAGE,"3-layer
 Muhammad_Isah,run_01,0.72236984259086,2026-03-28 21:26:42 UTC,human,GCNConv,Compact GCNConv with seed 25 and label smoothing
 Murad,gcn_v1,0.4996113894811101,2026-03-31 02:35:07 UTC,human,GCN (2-layer) top2 ensemble from 5-run GCN search,"Seed=25, 5-run manual search, GCN only, early stopping, class-balanced BCE, label smoothing, CPU Colab"
 Tuga Yousif,run1,0.5041023397544293,2026-04-01 03:38:14 UTC,human,GCNConv,/
+Tuga,run2,0.4991611306189448,2026-04-02 07:09:27 UTC,human,GAT,

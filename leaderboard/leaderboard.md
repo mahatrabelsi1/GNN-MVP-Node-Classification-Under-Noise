@@ -10,6 +10,7 @@
 | 6 | Abderrahmane | run_01 | human | GAT | 0.501077 | 2026-03-15 00:20:06 UTC |
 | 7 | Sargam_Goyal | 01 | human | BiGCN | 0.500183 | 2026-03-21 08:59:47 UTC |
 | 8 | Murad | gcn_v1 | human | GCN (2-layer) top2 ensemble from 5-run GCN search | 0.499611 | 2026-03-31 02:35:07 UTC |
-| 9 | samuel | run_01 | human | GCNConv | 0.498781 | 2026-03-10 10:26:23 UTC |
-| 10 | AIkram | run_1 | human | GraphSAGE | 0.484052 | 2026-03-28 16:55:17 UTC |
-| 11 | Team_Sanae | run_01 | hybrid | GraphSage | 0.476929 | 2026-03-08 00:17:41 UTC |
+| 9 | Tuga | run2 | human | GAT | 0.499161 | 2026-04-02 07:09:27 UTC |
+| 10 | samuel | run_01 | human | GCNConv | 0.498781 | 2026-03-10 10:26:23 UTC |
+| 11 | AIkram | run_1 | human | GraphSAGE | 0.484052 | 2026-03-28 16:55:17 UTC |
+| 12 | Team_Sanae | run_01 | hybrid | GraphSage | 0.476929 | 2026-03-08 00:17:41 UTC |
