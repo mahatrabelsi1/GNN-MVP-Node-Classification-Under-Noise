@@ -1,0 +1,8 @@
+{
+    "team": "Ignatius",
+    "run_id": "run_id_3",
+    "author_type": "human",
+    "model": "GraphSAGE",
+    "notes": "# 3-layered without dealing with class imbalance"
+  }
+  
