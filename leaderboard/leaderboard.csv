@@ -12,3 +12,4 @@ Murad,gcn_v1,0.4996113894811101,2026-03-31 02:35:07 UTC,human,GCN (2-layer) top2
 Tuga Yousif,run1,0.5041023397544293,2026-04-01 03:38:14 UTC,human,GCNConv,/
 Tuga,run2,0.4991611306189448,2026-04-02 07:09:27 UTC,human,GAT,
 Tuga A.Yousif,run3,0.4931422377274858,2026-04-02 07:51:11 UTC,human,GCNConv + dropout+norm,.
+Ignatius,run_id_3,0.47692893677222764,2026-04-02 23:04:45 UTC,human,GraphSAGE,# 3-layered without dealing with class imbalance
