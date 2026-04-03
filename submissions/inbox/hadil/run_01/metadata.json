@@ -1,0 +1,7 @@
+{
+  "team": "hadil",
+  "run_id": "run_01",
+  "author_type": "llm",
+  "model": "GATv2 (32 hidden, 4 heads, AdamW)",
+  "notes": "Rules compliant: seed=25, Macro-F1 oriented, GNN only, class weighting for imbalance."
+}
