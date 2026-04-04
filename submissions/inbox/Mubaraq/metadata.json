@@ -1,0 +1,7 @@
+{
+  "team": "Mubaraq",
+  "run_id": "run_001",
+  "author_type": "human",
+  "model": "Vanilla GCN",
+  "notes": "3 layer GCN"
+}
