@@ -10,8 +10,6 @@ AIkram,run_1,0.4840521667499136,2026-03-28 16:55:17 UTC,human,GraphSAGE,"3-layer
 Muhammad_Isah,run_01,0.72236984259086,2026-03-28 21:26:42 UTC,human,GCNConv,Compact GCNConv with seed 25 and label smoothing
 Murad,gcn_v1,0.4996113894811101,2026-03-31 02:35:07 UTC,human,GCN (2-layer) top2 ensemble from 5-run GCN search,"Seed=25, 5-run manual search, GCN only, early stopping, class-balanced BCE, label smoothing, CPU Colab"
 Tuga Yousif,run1,0.5041023397544293,2026-04-01 03:38:14 UTC,human,GCNConv,/
-Tuga,run2,0.4991611306189448,2026-04-02 07:09:27 UTC,human,GAT,
-Tuga A.Yousif,run3,0.4931422377274858,2026-04-02 07:51:11 UTC,human,GCNConv + dropout+norm,.
 Ignatius,run_id_3,0.4769289367722276,2026-04-02 23:04:45 UTC,human,GraphSAGE,# 3-layered without dealing with class imbalance
 hadil,run_01,0.7343810229367236,2026-04-03 21:49:46 UTC,hybrid,"GATv2 (32 hidden, 4 heads, AdamW)","Rules compliant: seed=25, Macro-F1 oriented, GNN only, class weighting for imbalance."
 Mubaraq,run_001,0.5709121563056945,2026-04-04 00:36:09 UTC,human,Vanilla GCN,3 layer GCN
