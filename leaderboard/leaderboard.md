@@ -5,16 +5,17 @@
 | 1 | Elhouiti_Ikram | run_03 | hybrid | GCN | 0.822378 | 2026-03-13 00:44:49 UTC |
 | 2 | RosaPY | run3 | human | GCN | 0.799283 | 2026-04-12 09:59:44 UTC |
 | 3 | faranbutt | run_01 | human | GAT(8-heads, LayerNorm) | 0.780878 | 2026-03-02 09:10:19 UTC |
-| 4 | hadil | run_01 | hybrid | GATv2 (32 hidden, 4 heads, AdamW) | 0.734381 | 2026-04-03 21:49:46 UTC |
-| 5 | Muhammad_Isah | run_01 | human | GCNConv | 0.722370 | 2026-03-28 21:26:42 UTC |
-| 6 | Mubaraq | run_001 | human | Vanilla GCN | 0.570912 | 2026-04-04 00:36:09 UTC |
-| 7 | emmanuel_owusu | run1 | human | GraphSAGE | 0.504607 | 2026-03-04 15:36:52 UTC |
-| 8 | Tuga Yousif | run1 | human | GCNConv | 0.504102 | 2026-04-01 03:38:14 UTC |
-| 9 | Abderrahmane | run_01 | human | GAT | 0.501077 | 2026-03-15 00:20:06 UTC |
-| 10 | Sargam_Goyal | 01 | human | BiGCN | 0.500183 | 2026-03-21 08:59:47 UTC |
-| 11 | Murad | gcn_v1 | human | GCN (2-layer) top2 ensemble from 5-run GCN search | 0.499611 | 2026-03-31 02:35:07 UTC |
-| 12 | samuel | run_01 | human | GCNConv | 0.498781 | 2026-03-10 10:26:23 UTC |
-| 13 | AIkram | run_1 | human | GraphSAGE | 0.484052 | 2026-03-28 16:55:17 UTC |
-| 14 | Team_Sanae | run_01 | hybrid | GraphSage | 0.476929 | 2026-03-08 00:17:41 UTC |
-| 14 | Ignatius | run_id_3 | human | GraphSAGE | 0.476929 | 2026-04-02 23:04:45 UTC |
-| 14 | Mohammad_Idrees_Bhat | run_01 | human | Simple GCN | 0.476929 | 2026-04-04 07:40:56 UTC |
+| 4 | DeepSeek-v4-pro | run_01 | llm | - | 0.743748 | 2026-05-15 19:41:44 UTC |
+| 5 | hadil | run_01 | hybrid | GATv2 (32 hidden, 4 heads, AdamW) | 0.734381 | 2026-04-03 21:49:46 UTC |
+| 6 | Muhammad_Isah | run_01 | human | GCNConv | 0.722370 | 2026-03-28 21:26:42 UTC |
+| 7 | Mubaraq | run_001 | human | Vanilla GCN | 0.570912 | 2026-04-04 00:36:09 UTC |
+| 8 | emmanuel_owusu | run1 | human | GraphSAGE | 0.504607 | 2026-03-04 15:36:52 UTC |
+| 9 | Tuga Yousif | run1 | human | GCNConv | 0.504102 | 2026-04-01 03:38:14 UTC |
+| 10 | Abderrahmane | run_01 | human | GAT | 0.501077 | 2026-03-15 00:20:06 UTC |
+| 11 | Sargam_Goyal | 01 | human | BiGCN | 0.500183 | 2026-03-21 08:59:47 UTC |
+| 12 | Murad | gcn_v1 | human | GCN (2-layer) top2 ensemble from 5-run GCN search | 0.499611 | 2026-03-31 02:35:07 UTC |
+| 13 | samuel | run_01 | human | GCNConv | 0.498781 | 2026-03-10 10:26:23 UTC |
+| 14 | AIkram | run_1 | human | GraphSAGE | 0.484052 | 2026-03-28 16:55:17 UTC |
+| 15 | Team_Sanae | run_01 | hybrid | GraphSage | 0.476929 | 2026-03-08 00:17:41 UTC |
+| 15 | Ignatius | run_id_3 | human | GraphSAGE | 0.476929 | 2026-04-02 23:04:45 UTC |
+| 15 | Mohammad_Idrees_Bhat | run_01 | human | Simple GCN | 0.476929 | 2026-04-04 07:40:56 UTC |
