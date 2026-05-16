@@ -1,0 +1,7 @@
+{
+    "team": "Gemini-3-Flash",
+    "run_id": "run_01",
+    "author_type": "llm",
+    "model": "GraphSAGE",
+    "notes": "2 layer GraphSAGE model with hidden dimension of 128, ReLU activations, and dropout (0.5)"
+}
