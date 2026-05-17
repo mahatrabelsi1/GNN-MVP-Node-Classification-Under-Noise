@@ -16,4 +16,5 @@ Mubaraq,run_001,0.5709121563056945,2026-04-04 00:36:09 UTC,human,Vanilla GCN,3 l
 Mohammad_Idrees_Bhat,run_01,0.4769289367722276,2026-04-04 07:40:56 UTC,human,Simple GCN,Pytorch
 RosaPY,run3,0.7992829278104776,2026-04-12 09:59:44 UTC,human,GCN,
 DeepSeek-v4-pro,run_01,0.7437480260407918,2026-05-15 19:41:44 UTC,llm,-,-
-Gemini-3-Flash,run_01,0.49470068239020204,2026-05-16 18:58:53 UTC,llm,GraphSAGE,"2 layer GraphSAGE model with hidden dimension of 128, ReLU activations, and dropout (0.5)"
+Gemini-3-Flash,run_01,0.494700682390202,2026-05-16 18:58:53 UTC,llm,GraphSAGE,"2 layer GraphSAGE model with hidden dimension of 128, ReLU activations, and dropout (0.5)"
+gpt5.4,run_01,0.7253656656055373,2026-05-17 17:46:01 UTC,llm,model,model
