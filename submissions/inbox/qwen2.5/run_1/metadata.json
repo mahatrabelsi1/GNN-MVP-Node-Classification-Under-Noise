@@ -1,5 +1,5 @@
 {
-  "team": "Qwen2.5-Coder-32B-Instruct",
+  "team": "Qwen2.5-Coder-32B-Instruct LLM",
   "run_id": "run_1",
   "author_type": "LLM",
   "model": "GCNConv",
