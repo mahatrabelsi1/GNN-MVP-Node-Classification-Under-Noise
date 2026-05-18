@@ -1,0 +1,7 @@
+{
+  "team": "Kimi K 2.6",
+  "run_id": "run_01",
+  "author_type": "llm",
+  "model": "SAGE + GCN Ensemble",
+  "notes": "3-layer GraphSAGE and 3-layer GCN ensemble with batch normalization, class weights for imbalance, early stopping on validation macro-F1. NaN/Inf handled via median imputation."
+}
