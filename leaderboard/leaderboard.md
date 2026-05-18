@@ -23,5 +23,6 @@
 | 19 | LLM_Gemini_25_Pro | run_gemini_25_pro | llm | GCN | 0.488485 | 2026-05-17 21:38:05 UTC |
 | 20 | AIkram | run_1 | human | GraphSAGE | 0.484052 | 2026-03-28 16:55:17 UTC |
 | 21 | Team_Sanae | run_01 | hybrid | GraphSage | 0.476929 | 2026-03-08 00:17:41 UTC |
-| 21 | Mohammad_Idrees_Bhat | run_01 | human | Simple GCN | 0.476929 | 2026-04-04 07:40:56 UTC |
 | 21 | Ignatius | run_id_3 | human | GraphSAGE | 0.476929 | 2026-04-02 23:04:45 UTC |
+| 21 | Mohammad_Idrees_Bhat | run_01 | human | Simple GCN | 0.476929 | 2026-04-04 07:40:56 UTC |
+| 24 | llm_llama33_70b | run_01 | llm | GCNConv | 0.328847 | 2026-05-18 05:57:42 UTC |
