@@ -23,4 +23,5 @@ LLM_Gemini_25_Pro,run_gemini_25_pro,0.4884847309881259,2026-05-17 21:38:05 UTC,l
 Qwen2.5-Coder-32B-Instruct,run_1,0.501950617180155,2026-05-17 22:30:55 UTC,llm,GCNConv,
 Qwen2.5-Coder-32B-Instruct LLM,run_1,0.501950617180155,2026-05-17 22:44:20 UTC,llm,GCNConv,
 llm_llama33_70b,run_01,0.3288474026710705,2026-05-18 05:57:42 UTC,llm,GCNConv,Generated code
-Kimi K 2.6,run_01,0.49260841437697533,2026-05-18 11:10:14 UTC,llm,SAGE + GCN Ensemble,"3-layer GraphSAGE and 3-layer GCN ensemble with batch normalization, class weights for imbalance, early stopping on validation macro-F1. NaN/Inf handled via median imputation."
+Kimi K 2.6,run_01,0.4926084143769753,2026-05-18 11:10:14 UTC,llm,SAGE + GCN Ensemble,"3-layer GraphSAGE and 3-layer GCN ensemble with batch normalization, class weights for imbalance, early stopping on validation macro-F1. NaN/Inf handled via median imputation."
+claude_opus_4_6,run_1,0.7833972762503372,2026-05-20 10:06:26 UTC,llm,GCN,GCN with noise-robust training
