@@ -1,0 +1,7 @@
+{
+  "team": "claude_opus_4_6",
+  "run_id": "run_1",
+  "author_type": "llm",
+  "model": "GCN",
+  "notes": "GCN with noise-robust training"
+}
