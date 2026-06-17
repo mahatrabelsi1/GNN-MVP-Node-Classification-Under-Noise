@@ -1,0 +1,7 @@
+{
+  "team": "AIkram",
+  "run_id": "run_1",
+  "author_type": "human",
+  "model": "GraphSAGE",
+  "notes": "3-layer GraphSAGE with StandardScaler, gradient clipping, weighted CE for class imbalance"
+}
